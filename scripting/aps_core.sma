@@ -116,13 +116,13 @@ parseData(const GripJSONValue:data) {
 }
 
 RegisterCoreForwards() {
-    g_Forwards[FW_REGISTERED_TYPE] = CreateMultiForward("APS_RegisteredType", ET_CONTINUE, FP_STRING, FP_STRING);
+    // g_Forwards[FW_REGISTERED_TYPE] = CreateMultiForward("APS_RegisteredType", ET_CONTINUE, FP_STRING, FP_STRING);
     g_Forwards[FW_PUNISH_PLAYER_PRE] = CreateMultiForward("APS_PunishPlayerPre", ET_CONTINUE, FP_CELL, FP_CELL);
     g_Forwards[FW_PUNISH_PLAYER_POST] = CreateMultiForward("APS_PunishPlayerPost", ET_IGNORE, FP_CELL, FP_CELL);
-    g_Forwards[FW_CHECK_PLAYER_PRE] = CreateMultiForward("APS_CheckPlayerPre", ET_CONTINUE, FP_CELL);
-    g_Forwards[FW_CHECK_PLAYER_POST] = CreateMultiForward("APS_CheckPlayerPost", ET_IGNORE, FP_CELL, FP_CELL);
-    g_Forwards[FW_UNPUNISH_PLAYER_PRE] = CreateMultiForward("APS_UnPunishPlayerPre", ET_CONTINUE, FP_CELL, FP_CELL);
-    g_Forwards[FW_UNPUNISH_PLAYER_POST] = CreateMultiForward("APS_UnPunishPlayerPost", ET_IGNORE);
+    // g_Forwards[FW_CHECK_PLAYER_PRE] = CreateMultiForward("APS_CheckPlayerPre", ET_CONTINUE, FP_CELL);
+    // g_Forwards[FW_CHECK_PLAYER_POST] = CreateMultiForward("APS_CheckPlayerPost", ET_IGNORE, FP_CELL, FP_CELL);
+    // g_Forwards[FW_UNPUNISH_PLAYER_PRE] = CreateMultiForward("APS_UnPunishPlayerPre", ET_CONTINUE, FP_CELL, FP_CELL);
+    // g_Forwards[FW_UNPUNISH_PLAYER_POST] = CreateMultiForward("APS_UnPunishPlayerPost", ET_IGNORE);
 
     //forward PS_PunishPlayerPre(const id, const type);
     //forward PS_PunishPlayerPost(const id, const type);
@@ -214,14 +214,15 @@ public NativePunishPlayer(plugin, params) {
     ExecuteForward(g_Forwards[FW_PUNISH_PLAYER_POST]);
 }
 
+/*
 public NativeUnPunishPlayer(plugin, params) {
-    /*enum {
+    enum {
         arg_index = 1,
         arg_type
     };
 
     new index = get_param(arg_index);
-    new punish_type = get_param(arg_type);*/
+    new punish_type = get_param(arg_type);
 
     ExecuteForward(g_Forwards[FW_UNPUNISH_PLAYER_PRE]);
 
@@ -230,9 +231,9 @@ public NativeUnPunishPlayer(plugin, params) {
 }
 
 public NativeCheckPlayer(plugin, params) {
-    /*enum { arg_index = 1 };
+    enum { arg_index = 1 };
 
-    new index = get_param(arg_index);*/
+    new index = get_param(arg_index);
 
     ExecuteForward(g_Forwards[FW_CHECK_PLAYER_PRE]);
 
@@ -245,13 +246,13 @@ public NativeGetPunishmentExpired(plugin, params) {
 }
 
 public NativeSetPunishmentExpired(plugin, params) {
-   /* enum { arg_expired = 1 };
+   enum { arg_expired = 1 };
 
-    new expired = get_param(arg_expired);*/
+    new expired = get_param(arg_expired);
 }
 
 public NativeGetPunishmentReason(plugin, params) {
-    /*enum {
+    enum {
         arg_reason = 1,
         arg_len 
     };
@@ -260,27 +261,24 @@ public NativeGetPunishmentReason(plugin, params) {
 
     set_string(arg_reason, reason, get_param(arg_len));
 
-    return reason;*/
+    return reason;
 }
 
 public NativeSetPunishmentReason(plugin, params) {
     // const comment[]
 }
 
-/*
-    Получение детальной причины бана
-    использовать в APS_PunishPlayerPre
-*/
 public NativeGetPunishmentDetails(plugin, params) {
-    /*enum { arg_comment = 1 };
+    enum { arg_comment = 1 };
     
     new comment[MAX_COMMENT_LENGTH];
 
     set_string(arg_comment, comment, charsmax(comment));
 
-    return comment;*/
+    return comment;
 }
 
 public NativeSetPunishmentComment(plugin, params) {
     // const comment[]
 }
+*/
