@@ -134,7 +134,7 @@ RegisterCoreForwards() {
 
 public plugin_natives() {
     register_native("APS_RegisterType", "NativeRegisterType", 0);
-    //register_native("APS_GetTypeID", "NativeGetTypeID", 0);
+    register_native("APS_GetTypeID", "NativeGetTypeID", 0);
     //register_native("APS_PunishPlayer", "NativePunishPlayer", 0);
     //register_native("APS_UnPunishPlayer", "NativeUnPunishPlayer", 0);
     //register_native("APS_CheckPlayer", "NativeCheckPlayer", 0);
@@ -154,9 +154,34 @@ public NativeRegisterType(plugin, params) {
     get_string(arg_name, punish_name, charsmax(punish_name));
     get_string(arg_desc, punish_desc, charsmax(punish_desc));
 
-    for(new i; i < TrieGetSize(g_JsonData); i++) {
+    for(new i, triesize = TrieGetSize(g_JsonData); i < triesize; i++) {
         arrayset(g_ParsingInfo, 0, sizeof g_ParsingInfo);
+        TrieGetArray(g_JsonData, fmt("punish_%d", i), g_ParsingInfo, charsmax(g_ParsingInfo));
 
+        if(!g_ParsingInfo[Name][0]) {
+            continue;
+        }
+
+        if(!equali(g_ParsingInfo[Name], punish_name)) {
+            //GamexMakeRequest("punishment/type", Invalid_GripJSONValue, "OnResponse");
+            // отправить реквест на создание и после удачного запроса вызвать форвард
+            TrieSetArray(g_JsonData, fmt("punish_%d", triesize), g_ParsingInfo, charsmax(g_ParsingInfo), .replace = false);
+        }
+
+        ExecuteForward(g_Forwards[FW_REGISTERED_TYPE], ret, punish_name, punish_desc);
+        break;
+    }
+}
+
+public NativeGetTypeID(plugin, params) {
+    enum { arg_name = 1 };
+
+    new punish_name[MAX_PUNISH_NAME_LENGTH], punish_index;
+
+    get_string(arg_name, punish_name, charsmax(punish_name));
+
+    for(new i, triesize = TrieGetSize(g_JsonData); i < triesize; i++) {
+        arrayset(g_ParsingInfo, 0, sizeof g_ParsingInfo);
         TrieGetArray(g_JsonData, fmt("punish_%d", i), g_ParsingInfo, charsmax(g_ParsingInfo));
 
         if(!g_ParsingInfo[Name][0]) {
@@ -164,25 +189,12 @@ public NativeRegisterType(plugin, params) {
         }
 
         if(equali(g_ParsingInfo[Name], punish_name)) {
-            ExecuteForward(g_Forwards[FW_REGISTERED_TYPE], ret, punish_name, punish_desc);
-            break;
+            punish_index = i;
+            break
         }
-
-        //if(equali(g_ParsingInfo[Name], punish_name)) {
-        //    log_amx("Тип наказаний есть в кэше, вызываем форвард FW_REGISTERED_TYPE");
-        //    ExecuteForward(g_Forwards[FW_REGISTERED_TYPE], ret, punish_index, punish_name);
-
-        //    break;
-        //} else {
-            //GamexMakeRequest("punishment/type", Invalid_GripJSONValue, "OnResponse");
-            // отправить реквест на создание и после удачного запроса вызвать форвард
-        //}
     }
-}
 
-public NativeGetTypeID(plugin, params) {
-    // const type[]
-
+    return punish_index;
 }
 
 public NativePunishPlayer(plugin, params) {
