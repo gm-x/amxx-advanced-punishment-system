@@ -57,7 +57,7 @@ new g_ParsingInfo[InfoType];
 new g_PunishNums;
 
 public plugin_init() {
-    register_plugin("[APS] Core", "0.0.1b", "");
+    register_plugin("[APS] Core", "0.0.1b", "GM-X Team");
 
     RegisterCoreForwards();
 }    
