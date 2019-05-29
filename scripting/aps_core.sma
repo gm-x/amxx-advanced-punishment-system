@@ -1,33 +1,43 @@
 #include <amxmodx>
-//#include <amxmisc>
-//#include <PersistentDataStorage>
-//#include <reapi>
+#include <amxmisc>
+#include <reapi>
 #include <grip>
 #include <gmx>
+#include <gmx_player>
 #include <aps>
 //#include <uac>
 
-new const FILE_NAME[] = "aps_settings.json";
+#define CHECK_NATIVE_ARGS_NUM(%1,%2) \
+	if (%1 < %2) { \
+		log_error(AMX_ERR_NATIVE, "Invalid num of arguments %d. Expected %d", %1, %2); \
+		return 0; \
+	}
+ 
+#define CHECK_NATIVE_PLAYER(%1) \
+	if (!is_user_connected(%1)) { \
+		log_error(AMX_ERR_NATIVE, "Invalid player %d", %1); \
+		return 0; \
+	}
 
 /*enum _:Type {
-    TypeName[MAX_TYPE_NAME_LEN],
-    TypePunishHandler,
-    TypeUnPunishHandler,
+	TypeName[MAX_TYPE_NAME_LEN],
+	TypePunishHandler,
+	TypeUnPunishHandler,
 }
 
 enum PunishmentStatus {
-    PunishmentStatusActive,
-    PunishmentStatusExpired,
-    PunishmentStatusUnpunished,
+	PunishmentStatusActive,
+	PunishmentStatusExpired,
+	PunishmentStatusUnpunished,
 }
 
 enum _:Punishment {
-    PunishmentType,
-    PunishmentExpired,
-    PunishmentReason[],
-    PunishmentComment[],
-    PunishmentPunisherType,
-    PunishmentPunisher,
+	PunishmentType,
+	PunishmentExpired,
+	PunishmentReason[],
+	PunishmentComment[],
+	PunishmentPunisherType,
+	PunishmentPunisher,
 }*/
 
 /*const MAX_COMMENT_LENGTH = 64;
@@ -35,210 +45,197 @@ const MAX_REASON_LENGTH = 64;
 const MAX_INFO_LENGTH = 64;
 const MAX_TIME_STRING_LENGTH = 12;*/
 
-enum _:InfoType {
-    Name[MAX_PUNISH_NAME_LENGTH],
-    Description[MAX_PUNISH_DESC_LENGTH]
-};
-
 enum CORE_FORWARDS {
-    FW_REGISTERED_TYPE = 0,
-    FW_PUNISH_PLAYER_PRE,
-    FW_PUNISH_PLAYER_POST,
-    FW_CHECK_PLAYER_PRE,
-    FW_CHECK_PLAYER_POST,
-    FW_UNPUNISH_PLAYER_PRE,
-    FW_UNPUNISH_PLAYER_POST
+	FW_PUNISH_PLAYER_PRE,
+	FW_PUNISH_PLAYER_POST,
+	FW_CHECK_PLAYER_PRE,
+	FW_CHECK_PLAYER_POST,
+	FW_UNPUNISH_PLAYER_PRE,
+	FW_UNPUNISH_PLAYER_POST
 };
 
 new g_Forwards[CORE_FORWARDS];
 
-new Trie:g_JsonData;
-new g_ParsingInfo[InfoType];
-new g_PunishNums;
+enum _:PunishmentStruc {
+	PunishmentID,
+	PunishmentType[32],
+	PunishmentExpired,
+	PunishmentReason[32],
+	PunishmentDetails[32],
+	APS_PunisherType:PunishmentPunisherType,
+	PunishmentPunisherID,
+	APS_PunishmentStatus:PunishmentStatus
+};
+ 
+new Punishment[PunishmentStruc];
+ 
+new Array:PlayersPunishment[MAX_PLAYERS + 1];
 
 public plugin_init() {
-    register_plugin("[APS] Core", "0.0.1b", "GM-X Team");
+	register_plugin("[APS] Core", "0.0.1b", "GM-X Team");
 
-    RegisterCoreForwards();
-}    
+	for (new i = 1; i <= MAX_PLAYERS; i++) {
+		PlayersPunishment[i] = ArrayCreate(PunishmentStruc, 0);
+	}
 
-public plugin_cfg() {
-    new filePath[128];
- 
-    get_localinfo("amxx_configsdir", filePath, charsmax(filePath));
-    formatex(filePath, charsmax(filePath), "%s/%s", filePath, FILE_NAME);
- 
-    if(file_exists(filePath)) {
-        new error[128];
-        new GripJSONValue:data = grip_json_parse_file(filePath, error, charsmax(error));
- 
-        if(data != Invalid_GripJSONValue) {
-            if(grip_json_get_type(data) != GripJSONArray) {
-                grip_destroy_json_value(data);
-                set_fail_state("Coudn't open %s. Bad format", filePath);
-            }
- 
-            parseData(data);
-            grip_destroy_json_value(data);
+	RegisterCoreForwards();
+}
 
-            new ret, fwd = CreateMultiForward("APS_Init", ET_IGNORE);
-            ExecuteForward(fwd, ret);
-            DestroyForward(fwd);
-        } else {
-            set_fail_state("Coudn't open %s. Error %s", filePath, error);  
-        }
-    }
+public plugin_end() {
+	for (new i = 1; i <= MAX_PLAYERS; i++) {
+		ArrayDestroy(PlayersPunishment[i]);
+	}
+}
 
-    log_amx("g_PunishNums = %d", g_PunishNums);
+public GMX_PlayerLoading(const id) {
+	ArrayClear(PlayersPunishment[id]);
 }
  
-parseData(const GripJSONValue:data) {
-    g_JsonData = TrieCreate();
+public GMX_PlayerLoaded(const id, GripJSONValue:data) {
+	// TODO: Find punishments for player
 
-    for(new i, n = grip_json_array_get_count(data), GripJSONValue:tmp; i < n; i++) {
-        tmp = grip_json_array_get_value(data, i);
- 
-        if(grip_json_get_type(tmp) == GripJSONObject) {
-            arrayset(g_ParsingInfo, 0, sizeof g_ParsingInfo);
- 
-            grip_json_object_get_string(tmp, "name", g_ParsingInfo[Name], charsmax(g_ParsingInfo[Name]));
-            grip_json_object_get_string(tmp, "desc", g_ParsingInfo[Description], charsmax(g_ParsingInfo[Description]));
- 
-            TrieSetArray(g_JsonData, fmt("punish_%d", i), g_ParsingInfo, sizeof g_ParsingInfo);
+	set_task_ex(1.0, "TaskCheckPlayer", id + 100, .flags = SetTask_Repeat);
+}
 
-            log_amx("i = %d | g_ParsingInfo[Name] = %s | g_ParsingInfo[Description] = %s", i, g_ParsingInfo[Name], g_ParsingInfo[Description]);
-        }
- 
-        grip_destroy_json_value(tmp);
-    }
- 
-    g_PunishNums = TrieGetSize(g_JsonData);
+public TaskCheckPlayer(id) {
+	id -= 100;
+
+	if (!is_user_connected(id)) {
+		return;
+	}
+
+	new now = get_systime();
+	for (new i = 0, n = ArraySize(PlayersPunishment[id]); i < n; i++) {
+		ArrayGetArray(PlayersPunishment[id], i, Punishment, sizeof Punishment);
+		if (Punishment[PunishmentStatus] == APS_PunishmentStatusActive && Punishment[PunishmentExpired] <= now) {
+			// TODO: unpunish player
+		}
+	}
 }
 
 RegisterCoreForwards() {
-    // g_Forwards[FW_REGISTERED_TYPE] = CreateMultiForward("APS_RegisteredType", ET_CONTINUE, FP_STRING, FP_STRING);
-    g_Forwards[FW_PUNISH_PLAYER_PRE] = CreateMultiForward("APS_PunishPlayerPre", ET_CONTINUE, FP_CELL, FP_CELL);
-    g_Forwards[FW_PUNISH_PLAYER_POST] = CreateMultiForward("APS_PunishPlayerPost", ET_IGNORE, FP_CELL, FP_CELL);
-    // g_Forwards[FW_CHECK_PLAYER_PRE] = CreateMultiForward("APS_CheckPlayerPre", ET_CONTINUE, FP_CELL);
-    // g_Forwards[FW_CHECK_PLAYER_POST] = CreateMultiForward("APS_CheckPlayerPost", ET_IGNORE, FP_CELL, FP_CELL);
-    // g_Forwards[FW_UNPUNISH_PLAYER_PRE] = CreateMultiForward("APS_UnPunishPlayerPre", ET_CONTINUE, FP_CELL, FP_CELL);
-    // g_Forwards[FW_UNPUNISH_PLAYER_POST] = CreateMultiForward("APS_UnPunishPlayerPost", ET_IGNORE);
+	g_Forwards[FW_PUNISH_PLAYER_PRE] = CreateMultiForward("APS_PlayerPunishing", ET_CONTINUE, FP_CELL, FP_CELL);
+	g_Forwards[FW_PUNISH_PLAYER_POST] = CreateMultiForward("APS_PlayerPunished", ET_IGNORE, FP_CELL, FP_CELL);
+	// g_Forwards[FW_CHECK_PLAYER_PRE] = CreateMultiForward("APS_CheckPlayerPre", ET_CONTINUE, FP_CELL);
+	// g_Forwards[FW_CHECK_PLAYER_POST] = CreateMultiForward("APS_CheckPlayerPost", ET_IGNORE, FP_CELL, FP_CELL);
+	// g_Forwards[FW_UNPUNISH_PLAYER_PRE] = CreateMultiForward("APS_UnPunishPlayerPre", ET_CONTINUE, FP_CELL, FP_CELL);
+	// g_Forwards[FW_UNPUNISH_PLAYER_POST] = CreateMultiForward("APS_UnPunishPlayerPost", ET_IGNORE);
 
-    //forward PS_PunishPlayerPre(const id, const type);
-    //forward PS_PunishPlayerPost(const id, const type);
-    //forward PS_CheckPlayerPre(const id);
-    //forward PS_CheckPlayerPost(const id, const bool:is_punished);
-    //forward PS_UnPunishPlayerPre(const id, const type);
-    //forward PS_UnPunishPlayerPost();    
+	//forward PS_PunishPlayerPre(const id, const type);
+	//forward PS_PunishPlayerPost(const id, const type);
+	//forward PS_CheckPlayerPre(const id);
+	//forward PS_CheckPlayerPost(const id, const bool:is_punished);
+	//forward PS_UnPunishPlayerPre(const id, const type);
+	//forward PS_UnPunishPlayerPost();    
 }
 
 public plugin_natives() {
-    register_native("APS_RegisterType", "NativeRegisterType", 0);
-    register_native("APS_GetTypeID", "NativeGetTypeID", 0);
-    //register_native("APS_PunishPlayer", "NativePunishPlayer", 0);
-    //register_native("APS_UnPunishPlayer", "NativeUnPunishPlayer", 0);
-    //register_native("APS_CheckPlayer", "NativeCheckPlayer", 0);
-    //register_native("APS_GetPunishmentExpired", "NativeGetPunishmentExpired", 0);
-    //register_native("APS_SetPunishmentExpired", "NativeSetPunishmentExpired", 0);
-    //register_native("APS_GetPunishmentReason", "NativeGetPunishmentReason", 0);
-    //register_native("APS_SetPunishmentReason", "NativeSetPunishmentReason", 0);
-    //register_native("APS_GetPunishmentDetails", "NativeGetPunishmentDetails", 0);
-    //register_native("APS_SetPunishmentComment", "NativeSetPunishmentComment", 0);  
+	register_native("APS_PunishPlayer", "NativePunishPlayer", 0);
+	//register_native("APS_UnPunishPlayer", "NativeUnPunishPlayer", 0);
+	//register_native("APS_CheckPlayer", "NativeCheckPlayer", 0);
+	//register_native("APS_GetPunishmentExpired", "NativeGetPunishmentExpired", 0);
+	//register_native("APS_SetPunishmentExpired", "NativeSetPunishmentExpired", 0);
+	//register_native("APS_GetPunishmentReason", "NativeGetPunishmentReason", 0);
+	//register_native("APS_SetPunishmentReason", "NativeSetPunishmentReason", 0);
+	//register_native("APS_GetPunishmentDetails", "NativeGetPunishmentDetails", 0);
+	//register_native("APS_SetPunishmentComment", "NativeSetPunishmentComment", 0);  
 }
 
-public NativeRegisterType(plugin, params) {
-    enum { arg_name = 1, arg_desc };
 
-    new punish_name[MAX_PUNISH_NAME_LENGTH], punish_desc[MAX_PUNISH_DESC_LENGTH], ret;
+public NativePunishPlayer(plugin, argc) {
+	enum { arg_player = 1, arg_type, arg_expired, arg_reason, arg_details, arg_punisher_id, arg_extra };
 
-    get_string(arg_name, punish_name, charsmax(punish_name));
-    get_string(arg_desc, punish_desc, charsmax(punish_desc));
+	CHECK_NATIVE_ARGS_NUM(argc, 4)
 
-    for(new i, triesize = TrieGetSize(g_JsonData); i < triesize; i++) {
-        arrayset(g_ParsingInfo, 0, sizeof g_ParsingInfo);
-        TrieGetArray(g_JsonData, fmt("punish_%d", i), g_ParsingInfo, charsmax(g_ParsingInfo));
+	new player = get_param(arg_player);
+	CHECK_NATIVE_PLAYER(player)
 
-        if(!g_ParsingInfo[Name][0]) {
-            continue;
-        }
+	new type[32];
+	get_string(arg_type, type, charsmax(type));
+	new expired = get_param(arg_expired);
+	new reason[32], details[32]; // TODO: max length must be in include as stock const
+	get_string(arg_reason, reason, charsmax(reason));
+	get_string(arg_details, details, charsmax(details));
+	new punisher_id = get_param(arg_punisher_id);
+	new extra = get_param(arg_extra);
 
-        if(!equali(g_ParsingInfo[Name], punish_name)) {
-            //GMX_MakeRequest("punishment/type", Invalid_GripJSONValue, "OnResponse");
-            // отправить реквест на создание и после удачного запроса вызвать форвард
-            TrieSetArray(g_JsonData, fmt("punish_%d", triesize), g_ParsingInfo, charsmax(g_ParsingInfo), .replace = false);
-        }
+	new GripJSONValue:request = grip_json_init_object();
+	grip_json_object_set_string(request, "type", type);
+	grip_json_object_set_number(request, "expired", expired);
+	grip_json_object_set_string(request, "reason", reason);
+	grip_json_object_set_string(request, "details", details);
+	grip_json_object_set_number(request, "extra", extra);
 
-        ExecuteForward(g_Forwards[FW_REGISTERED_TYPE], ret, punish_name, punish_desc);
-        break;
-    }
+	if (is_user_connected(punisher_id) && GMX_PlayerIsLoaded(punisher_id)) {
+		grip_json_object_set_number(request, "punisher_type", _:APS_PunisherTypePlayer);
+		grip_json_object_set_number(request, "id", GMX_PlayerGetPlayerId(punisher_id));
+	} else {
+		grip_json_object_set_number(request, "punisher_type", _:APS_PunisherTypeServer);
+		grip_json_object_set_number(request, "punisher_id", 0);
+	}
+
+	if (GMX_PlayerIsLoaded(player)) {
+		grip_json_object_set_number(request, "player_id", GMX_PlayerGetPlayerId(player));
+		GMX_MakeRequest("punish", request, "OnPunished", get_user_userid(player));
+	} else {
+		new steamid[24], nick[32], ip[32];
+		get_user_authid(player, steamid, charsmax(steamid));
+		get_user_name(player, nick, charsmax(nick));
+		get_user_ip(player, ip, charsmax(ip), 1);
+
+		new emulator = has_reunion() ? REU_GetProtocol(player) : 0;
+
+		grip_json_object_set_number(request, "emulator", emulator);
+		grip_json_object_set_string(request, "steamid", steamid);
+		grip_json_object_set_string(request, "nick", nick);
+		grip_json_object_set_string(request, "ip", ip);
+		GMX_MakeRequest("punish/immediately", request, "OnPunished", get_user_userid(player));
+	}
+
+	return 1;
 }
 
-public NativeGetTypeID(plugin, params) {
-    enum { arg_name = 1 };
+public OnPunished(const GmxResponseStatus:status, GripJSONValue:data, const userid) {
+	if (status != GmxResponseStatusOk) {
+		return;
+	}
+ 
+	new id = GMX_GetPlayerByUserID(userid);
+	if (id == 0) {
+		return;
+	}
 
-    new punish_name[MAX_PUNISH_NAME_LENGTH], punish_index;
-
-    get_string(arg_name, punish_name, charsmax(punish_name));
-
-    for(new i, triesize = TrieGetSize(g_JsonData); i < triesize; i++) {
-        arrayset(g_ParsingInfo, 0, sizeof g_ParsingInfo);
-        TrieGetArray(g_JsonData, fmt("punish_%d", i), g_ParsingInfo, charsmax(g_ParsingInfo));
-
-        if(!g_ParsingInfo[Name][0]) {
-            continue;
-        }
-
-        if(equali(g_ParsingInfo[Name], punish_name)) {
-            punish_index = i;
-            break
-        }
-    }
-
-    return punish_index;
+	if (grip_json_get_type(data) != GripJSONObject) {
+		return;
+	} 
 }
-
-public NativePunishPlayer(plugin, params) {
-    //const id, const type, const expired, const reason[], const comment[]
-
-    /*enum {
-        arg_index = 1,
-        arg_type,
-        arg_expired,
-        arg_reason,
-        arg_comment
-    };*/
-
-    ExecuteForward(g_Forwards[FW_PUNISH_PLAYER_PRE]);
-
-
-    ExecuteForward(g_Forwards[FW_PUNISH_PLAYER_POST]);
-}
+ 
 
 /*
 public NativeUnPunishPlayer(plugin, params) {
-    enum {
-        arg_index = 1,
-        arg_type
-    };
+	enum {
+		arg_index = 1,
+		arg_type
+	};
 
-    new index = get_param(arg_index);
-    new punish_type = get_param(arg_type);
+	new index = get_param(arg_index);
+	new punish_type = get_param(arg_type);
 
-    ExecuteForward(g_Forwards[FW_UNPUNISH_PLAYER_PRE]);
+	ExecuteForward(g_Forwards[FW_UNPUNISH_PLAYER_PRE]);
 
 
-    ExecuteForward(g_Forwards[FW_UNPUNISH_PLAYER_POST]);
+	ExecuteForward(g_Forwards[FW_UNPUNISH_PLAYER_POST]);
 }
 
 public NativeCheckPlayer(plugin, params) {
-    enum { arg_index = 1 };
+	enum { arg_index = 1 };
 
-    new index = get_param(arg_index);
+	new index = get_param(arg_index);
 
-    ExecuteForward(g_Forwards[FW_CHECK_PLAYER_PRE]);
+	ExecuteForward(g_Forwards[FW_CHECK_PLAYER_PRE]);
 
 
-    ExecuteForward(g_Forwards[FW_CHECK_PLAYER_POST]);
+	ExecuteForward(g_Forwards[FW_CHECK_PLAYER_POST]);
 }
 
 public NativeGetPunishmentExpired(plugin, params) {
@@ -248,37 +245,37 @@ public NativeGetPunishmentExpired(plugin, params) {
 public NativeSetPunishmentExpired(plugin, params) {
    enum { arg_expired = 1 };
 
-    new expired = get_param(arg_expired);
+	new expired = get_param(arg_expired);
 }
 
 public NativeGetPunishmentReason(plugin, params) {
-    enum {
-        arg_reason = 1,
-        arg_len 
-    };
+	enum {
+		arg_reason = 1,
+		arg_len 
+	};
 
-    new reason[MAX_REASON_LENGTH];
+	new reason[MAX_REASON_LENGTH];
 
-    set_string(arg_reason, reason, get_param(arg_len));
+	set_string(arg_reason, reason, get_param(arg_len));
 
-    return reason;
+	return reason;
 }
 
 public NativeSetPunishmentReason(plugin, params) {
-    // const comment[]
+	// const comment[]
 }
 
 public NativeGetPunishmentDetails(plugin, params) {
-    enum { arg_comment = 1 };
-    
-    new comment[MAX_COMMENT_LENGTH];
+	enum { arg_comment = 1 };
+	
+	new comment[MAX_COMMENT_LENGTH];
 
-    set_string(arg_comment, comment, charsmax(comment));
+	set_string(arg_comment, comment, charsmax(comment));
 
-    return comment;
+	return comment;
 }
 
 public NativeSetPunishmentComment(plugin, params) {
-    // const comment[]
+	// const comment[]
 }
 */
