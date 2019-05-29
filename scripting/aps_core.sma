@@ -163,7 +163,7 @@ public NativeRegisterType(plugin, params) {
         }
 
         if(!equali(g_ParsingInfo[Name], punish_name)) {
-            //GamexMakeRequest("punishment/type", Invalid_GripJSONValue, "OnResponse");
+            //GMX_MakeRequest("punishment/type", Invalid_GripJSONValue, "OnResponse");
             // отправить реквест на создание и после удачного запроса вызвать форвард
             TrieSetArray(g_JsonData, fmt("punish_%d", triesize), g_ParsingInfo, charsmax(g_ParsingInfo), .replace = false);
         }
