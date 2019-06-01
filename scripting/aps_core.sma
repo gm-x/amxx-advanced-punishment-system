@@ -7,16 +7,22 @@
 #include <aps>
 //#include <uac>
 
-#define CHECK_NATIVE_ARGS_NUM(%1,%2) \
+#define CHECK_NATIVE_ARGS_NUM(%1,%2,%3) \
 	if (%1 < %2) { \
 		log_error(AMX_ERR_NATIVE, "Invalid num of arguments %d. Expected %d", %1, %2); \
-		return 0; \
+		return %3; \
 	}
  
-#define CHECK_NATIVE_PLAYER(%1) \
+#define CHECK_NATIVE_PLAYER(%1,%2) \
 	if (!is_user_connected(%1)) { \
 		log_error(AMX_ERR_NATIVE, "Invalid player %d", %1); \
-		return 0; \
+		return %2; \
+	}
+
+#define CHECK_NATIVE_TYPE(%1,%2) \
+	if (0 > %1 || %1 >= TypesNum) { \
+		log_error(AMX_ERR_NATIVE, "Invalid type %d", %1); \
+		return %2; \
 	}
 
 /*enum _:Type {
@@ -56,6 +62,17 @@ enum CORE_FORWARDS {
 
 new g_Forwards[CORE_FORWARDS];
 
+enum FWD {
+	FWD_Initing,
+	FWD_Inited,
+	// FWD_Disconnected,
+}
+
+new Forwards[FWD];
+new Return;
+
+new Array:Types, TypesNum;
+
 enum _:PunishmentStruc {
 	PunishmentID,
 	PunishmentType[32],
@@ -74,17 +91,30 @@ new Array:PlayersPunishment[MAX_PLAYERS + 1];
 public plugin_init() {
 	register_plugin("[APS] Core", "0.0.1b", "GM-X Team");
 
+	Types = ArrayCreate(32, 0);
 	for (new i = 1; i <= MAX_PLAYERS; i++) {
 		PlayersPunishment[i] = ArrayCreate(PunishmentStruc, 0);
 	}
 
+	Forwards[FWD_Initing] = CreateMultiForward("APS_Initing", ET_STOP);
+	Forwards[FWD_Inited] = CreateMultiForward("APP_Inited", ET_STOP);
+
 	RegisterCoreForwards();
 }
 
+public plugin_cfg() {
+	ExecuteForward(Forwards[FWD_Initing], Return);
+	TypesNum = ArraySize(Types);
+	ExecuteForward(Forwards[FWD_Inited], Return);
+}
+
 public plugin_end() {
+	ArrayDestroy(Types);
 	for (new i = 1; i <= MAX_PLAYERS; i++) {
 		ArrayDestroy(PlayersPunishment[i]);
 	}
+	DestroyForward(Forwards[FWD_Initing]);
+	DestroyForward(Forwards[FWD_Inited]);
 }
 
 public GMX_PlayerLoading(const id) {
@@ -94,7 +124,39 @@ public GMX_PlayerLoading(const id) {
 public GMX_PlayerLoaded(const id, GripJSONValue:data) {
 	// TODO: Find punishments for player
 
+	new GripJSONValue:punishments = grip_json_object_get_value(data, "punishments");
+	if (punishments != Invalid_GripJSONValue) {
+		return;
+	}
+	for (new i = 0, n = grip_json_array_get_count(punishments), GripJSONValue:tmp; i < n; i++) {
+		tmp = grip_json_array_get_value(data, i);
+		if (grip_json_get_type(tmp) == GripJSONObject) {
+			parsePunishment(tmp);
+		}
+		grip_destroy_json_value(tmp);
+	}
+	grip_destroy_json_value(punishments);
+
 	set_task_ex(1.0, "TaskCheckPlayer", id + 100, .flags = SetTask_Repeat);
+}
+
+parsePunishment(const GripJSONValue:punishment) {
+	arrayset(Punishment, 0, sizeof Punishment);
+	new GripJSONValue:tmp;
+
+	Punishment[PunishmentID] = grip_json_object_get_number(punishment, "id");
+
+	grip_json_object_get_string(punishment, "type", Punishment[PunishmentType], charsmax(Punishment[PunishmentType]));
+
+	tmp = grip_json_object_get_value(punishment, "expired_at");
+	Punishment[PunishmentExpired] = grip_json_get_type(tmp) != GripJSONNull ? grip_json_get_number(tmp) : 0;
+	grip_destroy_json_value(tmp);
+
+	tmp = grip_json_object_get_value(punishment, "details");
+	if (grip_json_get_type(tmp) != GripJSONNull) {
+		grip_json_get_string(tmp, Punishment[PunishmentDetails], charsmax(Punishment[PunishmentDetails]));
+	}
+	grip_destroy_json_value(tmp);
 }
 
 public TaskCheckPlayer(id) {
@@ -130,6 +192,9 @@ RegisterCoreForwards() {
 }
 
 public plugin_natives() {
+	register_native("APS_RegisterType", "NativeRegisterType", 0);
+	register_native("APS_GetTypeIndex", "NativeGetTypeIndex", 0);
+	register_native("APS_GetTypeName", "NativeGetTypeName", 0);
 	register_native("APS_PunishPlayer", "NativePunishPlayer", 0);
 	//register_native("APS_UnPunishPlayer", "NativeUnPunishPlayer", 0);
 	//register_native("APS_CheckPlayer", "NativeCheckPlayer", 0);
@@ -142,16 +207,51 @@ public plugin_natives() {
 }
 
 
-public NativePunishPlayer(plugin, argc) {
-	enum { arg_player = 1, arg_type, arg_expired, arg_reason, arg_details, arg_punisher_id, arg_extra };
+public NativeRegisterType(plugin, argc) {
+	enum { arg_type = 1 };
 
-	CHECK_NATIVE_ARGS_NUM(argc, 4)
-
-	new player = get_param(arg_player);
-	CHECK_NATIVE_PLAYER(player)
+	CHECK_NATIVE_ARGS_NUM(argc, 1, -1)
 
 	new type[32];
 	get_string(arg_type, type, charsmax(type));
+	return ArrayPushString(Types, type);
+}
+
+public NativeGetTypeIndex(plugin, argc) {
+	enum { arg_type = 1 };
+
+	CHECK_NATIVE_ARGS_NUM(argc, 1, -1)
+
+	new type[32];
+	get_string(arg_type, type, charsmax(type));
+	return ArrayFindString(Types, type);
+}
+
+public NativeGetTypeName(plugin, argc) {
+	enum { arg_type = 1, arg_value, arg_len };
+
+	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
+
+	new typeIndex = get_param(arg_type)
+	CHECK_NATIVE_TYPE(typeIndex, 0)
+	new type[32];
+	ArrayGetString(Types, typeIndex, type, charsmax(type));
+	set_string(arg_value, type, get_param(arg_len));
+	return 1;
+}
+
+public NativePunishPlayer(plugin, argc) {
+	enum { arg_player = 1, arg_type, arg_expired, arg_reason, arg_details, arg_punisher_id, arg_extra };
+
+	CHECK_NATIVE_ARGS_NUM(argc, 4, 0)
+
+	new player = get_param(arg_player);
+	CHECK_NATIVE_PLAYER(player, 0)
+
+	new typeIndex = get_param(arg_type)
+	CHECK_NATIVE_TYPE(typeIndex, 0)
+	new type[32];
+	ArrayGetString(Types, typeIndex, type, charsmax(type));
 	new expired = get_param(arg_expired);
 	new reason[32], details[32]; // TODO: max length must be in include as stock const
 	get_string(arg_reason, reason, charsmax(reason));
@@ -209,6 +309,7 @@ public OnPunished(const GmxResponseStatus:status, GripJSONValue:data, const user
 		return;
 	} 
 }
+
  
 
 /*

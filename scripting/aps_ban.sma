@@ -1,6 +1,6 @@
 #include <amxmodx>
 // #include <gmx>
-//#include <aps>
+#include <aps>
 
 const ACCESS_FLAG = ADMIN_BAN;
 
@@ -20,20 +20,7 @@ const ACCESS_FLAG = ADMIN_BAN;
 	const MAX_TIME_STRING_LENGTH = 12;
 #endif
 
-enum APS_PunisherType {
-	APS_PunisherTypePlayer,
-	APS_PunisherTypeUser,
-	APS_PunisherTypeServer
-};
-
-// forward GMX_PlayerLoaded(const id, const arg2, const GripJSONValue:data);
-
-// forward APS_Init();
-// forward APS_TypeRegistered(const typeId, const name[]);
-// forward APS_PunishedPlayerPost(const id, const typeId, const expired);
-
-// native APS_RegisterType(const name[], const description[]);
-native APS_PunishPlayer(const id, const type[], const expired, const reason[], const details[] = "", const APS_PunisherType:punisherType = APS_PunisherTypeServer, const punisherId = 0);
+new TypeId;
 
 public plugin_init() {
 	register_plugin("[APS] Ban", "0.1.0", "GM-X Team");
@@ -41,9 +28,9 @@ public plugin_init() {
 	register_concmd("aps_ban", "CmdBan", ADMIN_BAN);
 }
 
-// public GMX_PlayerLoaded(const id, const arg2, const GripJSONValue:data) {
-
-// }
+public APS_Initing() {
+	TypeId = APS_RegisterType("ban");
+}
 
 // public APS_PunishedPlayerPost(const id, const typeId, const expired) {
 //     if(typeId != g_BanTypeId) {
@@ -82,7 +69,7 @@ public CmdBan(const id, const level) {
 	read_argv(arg_reason, reason, charsmax(reason));
 	read_argv(arg_details, details, charsmax(details));
 
-	APS_PunishPlayer(player, "ban", time, reason, reason, APS_PunisherTypePlayer, id);
+	APS_PunishPlayer(player, TypeId, time, reason, details, id);
 
 	return PLUGIN_HANDLED;
 }
@@ -93,10 +80,6 @@ findClientIndexByTarget(const buffer[]) {
 	}
 
 	new result = find_player_ex(FindPlayer_MatchAuthId, buffer);
-	if (!result) {
-		result = find_player_ex(FindPlayer_MatchIP, buffer);
-	}
-
 	if (!result) {
 		result = find_player_ex(FindPlayer_MatchIP, buffer);
 	}
