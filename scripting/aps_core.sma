@@ -25,26 +25,6 @@
 		return %2; \
 	}
 
-/*enum PunishmentStatus {
-	PunishmentStatusActive,
-	PunishmentStatusExpired,
-	PunishmentStatusUnpunished,
-}
-
-enum _:Punishment {
-	PunishmentType,
-	PunishmentExpired,
-	PunishmentReason[],
-	PunishmentComment[],
-	PunishmentPunisherType,
-	PunishmentPunisher,
-}*/
-
-/*const MAX_COMMENT_LENGTH = 64;
-const MAX_REASON_LENGTH = 64;
-const MAX_INFO_LENGTH = 64;
-const MAX_TIME_STRING_LENGTH = 12;*/
-
 enum FWD {
 	FWD_Initing,
 	FWD_Inited,
@@ -178,14 +158,14 @@ public plugin_natives() {
 	register_native("APS_GetTypeIndex", "NativeGetTypeIndex", 0);
 	register_native("APS_GetTypeName", "NativeGetTypeName", 0);
 	register_native("APS_PunishPlayer", "NativePunishPlayer", 0);
+	register_native("APS_GetExpired", "NativeGetExpired", 0);
+	register_native("APS_SetExpired", "NativeSetExpired", 0);
+	register_native("APS_GetReason", "NativeGetReason", 0);
+	register_native("APS_SetReason", "NativeSetReason", 0);
+	register_native("APS_GetDetails", "NativeGetDetails", 0);
+	register_native("APS_SetDetails", "NativeSetDetails", 0);
 	//register_native("APS_UnPunishPlayer", "NativeUnPunishPlayer", 0);
 	//register_native("APS_CheckPlayer", "NativeCheckPlayer", 0);
-	//register_native("APS_GetPunishmentExpired", "NativeGetPunishmentExpired", 0);
-	//register_native("APS_SetPunishmentExpired", "NativeSetPunishmentExpired", 0);
-	//register_native("APS_GetPunishmentReason", "NativeGetPunishmentReason", 0);
-	//register_native("APS_SetPunishmentReason", "NativeSetPunishmentReason", 0);
-	//register_native("APS_GetPunishmentDetails", "NativeGetPunishmentDetails", 0);
-	//register_native("APS_SetPunishmentComment", "NativeSetPunishmentComment", 0);  
 }
 
 public NativeRegisterType(plugin, argc) {
@@ -213,7 +193,7 @@ public NativeGetTypeName(plugin, argc) {
 
 	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
 
-	new typeIndex = get_param(arg_type)
+	new typeIndex = get_param(arg_type);
 	CHECK_NATIVE_TYPE(typeIndex, 0)
 	new type[APS_MAX_TYPE_LENGTH];
 	ArrayGetString(Types, typeIndex, type, charsmax(type));
@@ -301,7 +281,42 @@ public OnPunished(const GmxResponseStatus:status, GripJSONValue:data, const user
 	ExecuteForward(Forwards[FWD_PlayerPunished], Return, id, Punishment[PunishmentType]);
 }
 
- 
+public NativeGetExpired(plugin, argc) {
+	return Punishment[PunishmentExpired];
+}
+
+public NativeSetExpired(plugin, argc) {
+	enum { arg_value = 1};
+	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
+	Punishment[PunishmentExpired] = get_param(arg_value);
+	return 1;
+}
+
+public NativeGetReason(plugin, argc) {
+	enum { arg_value = 1, arg_len  };
+	CHECK_NATIVE_ARGS_NUM(argc, 2, 0)
+	return set_string(arg_value, Punishment[PunishmentReason], get_param(arg_len));
+}
+
+public NativeSetReason(plugin, argc) {
+	enum { arg_value = 1  };
+	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
+	get_string(arg_value, Punishment[PunishmentReason], charsmax(Punishment[PunishmentReason]));
+	return 1;
+}
+
+public NativeGetDetails(plugin, argc) {
+	enum { arg_value = 1, arg_len  };
+	CHECK_NATIVE_ARGS_NUM(argc, 2, 0)
+	return set_string(arg_value, Punishment[PunishmentDetails], get_param(arg_len));
+}
+
+public NativeSetDetails(plugin, argc) {
+	enum { arg_value = 1  };
+	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
+	get_string(arg_value, Punishment[PunishmentDetails], charsmax(Punishment[PunishmentDetails]));
+	return 1;
+}
 
 /*
 public NativeUnPunishPlayer(plugin, params) {
