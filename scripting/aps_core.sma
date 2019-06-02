@@ -25,13 +25,7 @@
 		return %2; \
 	}
 
-/*enum _:Type {
-	TypeName[MAX_TYPE_NAME_LEN],
-	TypePunishHandler,
-	TypeUnPunishHandler,
-}
-
-enum PunishmentStatus {
+/*enum PunishmentStatus {
 	PunishmentStatusActive,
 	PunishmentStatusExpired,
 	PunishmentStatusUnpunished,
@@ -67,8 +61,8 @@ enum _:PunishmentStruc {
 	PunishmentID,
 	PunishmentType,
 	PunishmentExpired,
-	PunishmentReason[32],
-	PunishmentDetails[32],
+	PunishmentReason[APS_MAX_TYPE_LENGTH],
+	PunishmentDetails[APS_MAX_DETAILS_LENGTH],
 	APS_PunisherType:PunishmentPunisherType,
 	PunishmentPunisherID,
 	APS_PunishmentStatus:PunishmentStatus
@@ -81,7 +75,7 @@ new Array:PlayersPunishment[MAX_PLAYERS + 1];
 public plugin_init() {
 	register_plugin("[APS] Core", "0.0.1b", "GM-X Team");
 
-	Types = ArrayCreate(32, 0);
+	Types = ArrayCreate(APS_MAX_TYPE_LENGTH, 0);
 	for (new i = 1; i <= MAX_PLAYERS; i++) {
 		PlayersPunishment[i] = ArrayCreate(PunishmentStruc, 0);
 	}
@@ -123,6 +117,7 @@ public GMX_PlayerLoaded(const id, GripJSONValue:data) {
 	for (new i = 0, n = grip_json_array_get_count(punishments), GripJSONValue:tmp; i < n; i++) {
 		tmp = grip_json_array_get_value(data, i);
 		if (grip_json_get_type(tmp) == GripJSONObject) {
+			server_print("^t PARSE PUNISHMENT");
 			parsePunishment(tmp);
 		}
 		grip_destroy_json_value(tmp);
@@ -138,10 +133,18 @@ parsePunishment(const GripJSONValue:punishment) {
 
 	Punishment[PunishmentID] = grip_json_object_get_number(punishment, "id");
 
-	// grip_json_object_get_string(punishment, "type", Punishment[PunishmentType], charsmax(Punishment[PunishmentType]));
+	new type[32];
+	grip_json_object_get_string(punishment, "type", type, charsmax(type));
+	Punishment[PunishmentReason] = ArrayFindString(Types, type);
 
 	tmp = grip_json_object_get_value(punishment, "expired_at");
 	Punishment[PunishmentExpired] = grip_json_get_type(tmp) != GripJSONNull ? grip_json_get_number(tmp) : 0;
+	grip_destroy_json_value(tmp);
+
+	tmp = grip_json_object_get_value(punishment, "reason");
+	if (grip_json_get_type(tmp) != GripJSONObject) {
+		grip_json_get_string(tmp, Punishment[PunishmentReason], charsmax(Punishment[PunishmentReason]));
+	}
 	grip_destroy_json_value(tmp);
 
 	tmp = grip_json_object_get_value(punishment, "details");
@@ -149,6 +152,9 @@ parsePunishment(const GripJSONValue:punishment) {
 		grip_json_get_string(tmp, Punishment[PunishmentDetails], charsmax(Punishment[PunishmentDetails]));
 	}
 	grip_destroy_json_value(tmp);
+
+
+	server_print("^t PARSED PUNISHMENT %d", Punishment[PunishmentID]);
 }
 
 public TaskCheckPlayer(id) {
@@ -187,7 +193,7 @@ public NativeRegisterType(plugin, argc) {
 
 	CHECK_NATIVE_ARGS_NUM(argc, 1, -1)
 
-	new type[32];
+	new type[APS_MAX_TYPE_LENGTH];
 	get_string(arg_type, type, charsmax(type));
 	return ArrayPushString(Types, type);
 }
@@ -197,7 +203,7 @@ public NativeGetTypeIndex(plugin, argc) {
 
 	CHECK_NATIVE_ARGS_NUM(argc, 1, -1)
 
-	new type[32];
+	new type[APS_MAX_TYPE_LENGTH];
 	get_string(arg_type, type, charsmax(type));
 	return ArrayFindString(Types, type);
 }
@@ -209,7 +215,7 @@ public NativeGetTypeName(plugin, argc) {
 
 	new typeIndex = get_param(arg_type)
 	CHECK_NATIVE_TYPE(typeIndex, 0)
-	new type[32];
+	new type[APS_MAX_TYPE_LENGTH];
 	ArrayGetString(Types, typeIndex, type, charsmax(type));
 	set_string(arg_value, type, get_param(arg_len));
 	return 1;
@@ -245,7 +251,7 @@ public NativePunishPlayer(plugin, argc) {
 
 	new GripJSONValue:request = grip_json_init_object();
 
-	new type[32];
+	new type[APS_MAX_TYPE_LENGTH];
 	ArrayGetString(Types, Punishment[PunishmentType], type, charsmax(type));
 	grip_json_object_set_string(request, "type", type);
 	grip_json_object_set_number(request, "expired", Punishment[PunishmentExpired]);

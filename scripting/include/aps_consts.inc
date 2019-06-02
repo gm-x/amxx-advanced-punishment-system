@@ -3,7 +3,9 @@
 #endif
 #define _aps_consts_included
 
-const MAX_PUNISH_NAME_LENGTH = 64;
+#define APS_MAX_TYPE_LENGTH 32
+#define APS_MAX_REASON_LENGTH 64
+#define APS_MAX_DETAILS_LENGTH 64
 
 const MAX_PUNISH_DESC_LENGTH = 64;
 
