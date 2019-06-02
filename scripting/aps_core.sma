@@ -109,6 +109,7 @@ public GMX_PlayerLoaded(const id, GripJSONValue:data) {
 		if (grip_json_get_type(tmp) == GripJSONObject) {
 			parsePunishment(tmp);
 			ArrayPushArray(PlayersPunishment[id], Punishment, sizeof Punishment);
+			ExecuteForward(Forwards[FWD_PlayerPunished], Return, id, Punishment[PunishmentType]);
 		}
 		grip_destroy_json_value(tmp);
 	}
@@ -116,6 +117,24 @@ public GMX_PlayerLoaded(const id, GripJSONValue:data) {
 
 	ExecuteForward(Forwards[FWD_PlayerChecked], Return, id);
 	// set_task_ex(1.0, "TaskCheckPlayer", id + 100, .flags = SetTask_Repeat);
+}
+
+public OnPunished(const GmxResponseStatus:status, GripJSONValue:data, const userid) {
+	if (status != GmxResponseStatusOk) {
+		return;
+	}
+ 
+	new id = GMX_GetPlayerByUserID(userid);
+	if (id == 0) {
+		return;
+	}
+
+	if (grip_json_get_type(data) != GripJSONObject) {
+		return;
+	}
+
+	parsePunishment(data);
+	ExecuteForward(Forwards[FWD_PlayerPunished], Return, id, Punishment[PunishmentType]);
 }
 
 parsePunishment(const GripJSONValue:punishment) {
@@ -270,23 +289,6 @@ public NativePunishPlayer(plugin, argc) {
 	}
 
 	return 1;
-}
-
-public OnPunished(const GmxResponseStatus:status, GripJSONValue:data, const userid) {
-	if (status != GmxResponseStatusOk) {
-		return;
-	}
- 
-	new id = GMX_GetPlayerByUserID(userid);
-	if (id == 0) {
-		return;
-	}
-
-	if (grip_json_get_type(data) != GripJSONObject) {
-		return;
-	}
-
-	ExecuteForward(Forwards[FWD_PlayerPunished], Return, id, Punishment[PunishmentType]);
 }
 
 public NativeGetExpired(plugin, argc) {

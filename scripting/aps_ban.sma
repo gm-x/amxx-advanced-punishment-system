@@ -32,15 +32,19 @@ public APS_Initing() {
 	TypeId = APS_RegisterType("ban");
 }
 
-// public APS_PunishedPlayerPost(const id, const typeId, const expired) {
-//     if(typeId != g_BanTypeId) {
-//         return PLUGIN_CONTINUE;
-//     }
+public APS_PlayerPunished(const id, const type) {
+	if(type != TypeId) {
+		return;
+	}
 	
-//     server_cmd("kick #%d", get_user_userid(id));
-
-//     return PLUGIN_CONTINUE;
-// }
+	new reason[APS_MAX_REASON_LENGTH];
+	APS_GetReason(reason, charsmax(reason));
+	if (reason[0] != EOS) {
+		server_cmd("kick #%d ^"%s^"", get_user_userid(id), reason);
+	} else {
+		server_cmd("kick #%d", get_user_userid(id));
+	}
+}
 
 public CmdBan(const id, const level) {
 	enum { arg_player = 1, arg_time, arg_reason, arg_details };
