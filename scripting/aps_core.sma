@@ -88,26 +88,27 @@ public plugin_end() {
 	DestroyForward(Forwards[FWD_PlayerChecked]);
 }
 
-public GMX_PlayerLoading(const id) {
+public client_connect(id) {
 	ArrayClear(PlayersPunishment[id]);
 }
  
 public GMX_PlayerLoaded(const id, GripJSONValue:data) {
+	ArrayClear(PlayersPunishment[id]);
 	ExecuteForward(Forwards[FWD_PlayerChecking], Return, id);
 	if (Return == PLUGIN_HANDLED) {
 		return;
 	}
-	// TODO: Find punishments for player
-	server_print("^t PARSE PUNISHMENT");
+
 	new GripJSONValue:punishments = grip_json_object_get_value(data, "punishments");
-	if (punishments != Invalid_GripJSONValue) {
+	if (punishments == Invalid_GripJSONValue) {
 		return;
 	}
+
 	for (new i = 0, n = grip_json_array_get_count(punishments), GripJSONValue:tmp; i < n; i++) {
-		tmp = grip_json_array_get_value(data, i);
+		tmp = grip_json_array_get_value(punishments, i);
 		if (grip_json_get_type(tmp) == GripJSONObject) {
-			
 			parsePunishment(tmp);
+			ArrayPushArray(PlayersPunishment[id], Punishment, sizeof Punishment);
 		}
 		grip_destroy_json_value(tmp);
 	}
@@ -142,9 +143,6 @@ parsePunishment(const GripJSONValue:punishment) {
 		grip_json_get_string(tmp, Punishment[PunishmentDetails], charsmax(Punishment[PunishmentDetails]));
 	}
 	grip_destroy_json_value(tmp);
-
-
-	server_print("^t PARSED PUNISHMENT %d", Punishment[PunishmentID]);
 }
 
 public TaskCheckPlayer(id) {
