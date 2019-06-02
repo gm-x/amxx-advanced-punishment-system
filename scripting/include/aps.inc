@@ -8,9 +8,10 @@
 
 forward APS_Initing();
 forward APP_Inited();
-//forward APS_PunishedPlayerPost(const id, const typeId, const expired);
+forward APS_PlayerPunishing(const id, const type);
+forward APS_PlayerPunished(const id, const type);
 
 native APS_RegisterType(const name[]);
 native APS_GetTypeIndex(const name[]);
 native APS_GetTypeName(const index, value[], len);
-native APS_PunishPlayer(const id, const type, const expired, const reason[], const details[] = "", const punisherId = 0, const extra = 0);
+native APS_PunishPlayer(const id, const type, const expired, const reason[], const details[] = "", const punisherId = 0);
