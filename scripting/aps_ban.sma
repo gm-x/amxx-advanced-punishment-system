@@ -37,13 +37,7 @@ public APS_PlayerPunished(const id, const type) {
 		return;
 	}
 	
-	new reason[APS_MAX_REASON_LENGTH];
-	APS_GetReason(reason, charsmax(reason));
-	if (reason[0] != EOS) {
-		server_cmd("kick #%d ^"%s^"", get_user_userid(id), reason);
-	} else {
-		server_cmd("kick #%d", get_user_userid(id));
-	}
+	server_cmd("kick #%d ^"%s^"", get_user_userid(id), "Вы забанени! Делали в консоли или на сайте");
 }
 
 public CmdBan(const id, const level) {
@@ -67,7 +61,7 @@ public CmdBan(const id, const level) {
 		return PLUGIN_HANDLED;
 	}
 
-	new time = read_argv_int(arg_time);
+	new time = read_argv_int(arg_time) * 60;
 
 	new reason[32], details[32];
 	read_argv(arg_reason, reason, charsmax(reason));

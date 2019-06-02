@@ -14,7 +14,7 @@ forward APS_PlayerPunished(const id, const type);
 native APS_RegisterType(const name[]);
 native APS_GetTypeIndex(const name[]);
 native APS_GetTypeName(const index, value[], len);
-native APS_PunishPlayer(const id, const type, const expired, const reason[], const details[] = "", const punisherId = 0);
+native APS_PunishPlayer(const id, const type, const time, const reason[], const details[] = "", const punisherId = 0);
 native APS_GetExpired();
 native APS_SetExpired(const expired);
 native APS_GetReason(value[], const len);
