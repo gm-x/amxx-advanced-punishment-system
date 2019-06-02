@@ -190,6 +190,8 @@ public plugin_natives() {
 	register_native("APS_GetTypeIndex", "NativeGetTypeIndex", 0);
 	register_native("APS_GetTypeName", "NativeGetTypeName", 0);
 	register_native("APS_PunishPlayer", "NativePunishPlayer", 0);
+	register_native("APS_GetTime", "NativeGetTime", 0);
+	register_native("APS_SetTime", "NativeSetTime", 0);
 	register_native("APS_GetExpired", "NativeGetExpired", 0);
 	register_native("APS_SetExpired", "NativeSetExpired", 0);
 	register_native("APS_GetReason", "NativeGetReason", 0);
@@ -296,8 +298,19 @@ public NativePunishPlayer(plugin, argc) {
 	return 1;
 }
 
-public NativeGetExpired(plugin, argc) {
+public NativeGetTime(plugin, argc) {
 	return Punishment[PunishmentExpired];
+}
+
+public NativeSetTime(plugin, argc) {
+	enum { arg_value = 1};
+	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
+	Punishment[PunishmentTime] = get_param(arg_value);
+	return 1;
+}
+
+public NativeGetExpired(plugin, argc) {
+	return Punishment[PunishmentTime];
 }
 
 public NativeSetExpired(plugin, argc) {
