@@ -5,7 +5,6 @@
 #include <gmx>
 #include <gmx_player>
 #include <aps>
-//#include <uac>
 
 #define CHECK_NATIVE_ARGS_NUM(%1,%2,%3) \
 	if (%1 < %2) { \
@@ -26,10 +25,10 @@
 	}
 
 enum FWD {
-	FWD_Initing,
-	FWD_Inited,
 	FWD_PlayerPunishing,
 	FWD_PlayerPunished,
+	FWD_PlayerChecking,
+	FWD_PlayerChecked,
 }
 
 new Forwards[FWD];
@@ -60,16 +59,22 @@ public plugin_init() {
 		PlayersPunishment[i] = ArrayCreate(PunishmentStruc, 0);
 	}
 
-	Forwards[FWD_Initing] = CreateMultiForward("APS_Initing", ET_STOP);
-	Forwards[FWD_Inited] = CreateMultiForward("APP_Inited", ET_IGNORE);
 	Forwards[FWD_PlayerPunishing] = CreateMultiForward("APS_PlayerPunishing", ET_STOP, FP_CELL, FP_CELL);
 	Forwards[FWD_PlayerPunished] = CreateMultiForward("APS_PlayerPunished", ET_IGNORE, FP_CELL, FP_CELL);
+	Forwards[FWD_PlayerChecking] = CreateMultiForward("APS_PlayerChecking", ET_STOP, FP_CELL);
+	Forwards[FWD_PlayerChecked] = CreateMultiForward("APS_PlayerChecked", ET_IGNORE, FP_CELL);
 }
 
 public plugin_cfg() {
-	ExecuteForward(Forwards[FWD_Initing], Return);
+	new fwdIniting = CreateMultiForward("APS_Initing", ET_STOP);
+	new fwdInited = CreateMultiForward("APP_Inited", ET_IGNORE);
+
+	ExecuteForward(fwdIniting, Return);
 	TypesNum = ArraySize(Types);
-	ExecuteForward(Forwards[FWD_Inited], Return);
+	ExecuteForward(fwdInited, Return);
+
+	DestroyForward(fwdIniting);
+	DestroyForward(fwdInited);
 }
 
 public plugin_end() {
@@ -77,10 +82,10 @@ public plugin_end() {
 	for (new i = 1; i <= MAX_PLAYERS; i++) {
 		ArrayDestroy(PlayersPunishment[i]);
 	}
-	DestroyForward(Forwards[FWD_Initing]);
-	DestroyForward(Forwards[FWD_Inited]);
 	DestroyForward(Forwards[FWD_PlayerPunishing]);
 	DestroyForward(Forwards[FWD_PlayerPunished]);
+	DestroyForward(Forwards[FWD_PlayerChecking]);
+	DestroyForward(Forwards[FWD_PlayerChecked]);
 }
 
 public GMX_PlayerLoading(const id) {
@@ -88,8 +93,12 @@ public GMX_PlayerLoading(const id) {
 }
  
 public GMX_PlayerLoaded(const id, GripJSONValue:data) {
+	ExecuteForward(Forwards[FWD_PlayerChecking], Return, id);
+	if (Return == PLUGIN_HANDLED) {
+		return;
+	}
 	// TODO: Find punishments for player
-
+	server_print("^t PARSE PUNISHMENT");
 	new GripJSONValue:punishments = grip_json_object_get_value(data, "punishments");
 	if (punishments != Invalid_GripJSONValue) {
 		return;
@@ -97,14 +106,15 @@ public GMX_PlayerLoaded(const id, GripJSONValue:data) {
 	for (new i = 0, n = grip_json_array_get_count(punishments), GripJSONValue:tmp; i < n; i++) {
 		tmp = grip_json_array_get_value(data, i);
 		if (grip_json_get_type(tmp) == GripJSONObject) {
-			server_print("^t PARSE PUNISHMENT");
+			
 			parsePunishment(tmp);
 		}
 		grip_destroy_json_value(tmp);
 	}
 	grip_destroy_json_value(punishments);
 
-	set_task_ex(1.0, "TaskCheckPlayer", id + 100, .flags = SetTask_Repeat);
+	ExecuteForward(Forwards[FWD_PlayerChecked], Return, id);
+	// set_task_ex(1.0, "TaskCheckPlayer", id + 100, .flags = SetTask_Repeat);
 }
 
 parsePunishment(const GripJSONValue:punishment) {
@@ -343,46 +353,5 @@ public NativeCheckPlayer(plugin, params) {
 
 
 	ExecuteForward(g_Forwards[FW_CHECK_PLAYER_POST]);
-}
-
-public NativeGetPunishmentExpired(plugin, params) {
-
-}
-
-public NativeSetPunishmentExpired(plugin, params) {
-   enum { arg_expired = 1 };
-
-	new expired = get_param(arg_expired);
-}
-
-public NativeGetPunishmentReason(plugin, params) {
-	enum {
-		arg_reason = 1,
-		arg_len 
-	};
-
-	new reason[MAX_REASON_LENGTH];
-
-	set_string(arg_reason, reason, get_param(arg_len));
-
-	return reason;
-}
-
-public NativeSetPunishmentReason(plugin, params) {
-	// const comment[]
-}
-
-public NativeGetPunishmentDetails(plugin, params) {
-	enum { arg_comment = 1 };
-	
-	new comment[MAX_COMMENT_LENGTH];
-
-	set_string(arg_comment, comment, charsmax(comment));
-
-	return comment;
-}
-
-public NativeSetPunishmentComment(plugin, params) {
-	// const comment[]
 }
 */
