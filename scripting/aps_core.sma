@@ -36,14 +36,14 @@ enum FWD {
 	FWD_PlayerChecked,
 }
 
-new Forwards[FWD];
-new Return;
+new Forwards[FWD], FwdReturn;
 
 new Array:Types, TypesNum;
 
 enum _:PunishmentStruc {
 	PunishmentID,
 	PunishmentType,
+	PunishmentExtra,
 	PunishmentTime,
 	PunishmentExpired,
 	PunishmentReason[APS_MAX_TYPE_LENGTH],
@@ -75,9 +75,9 @@ public plugin_cfg() {
 	new fwdIniting = CreateMultiForward("APS_Initing", ET_STOP);
 	new fwdInited = CreateMultiForward("APP_Inited", ET_IGNORE);
 
-	ExecuteForward(fwdIniting, Return);
+	ExecuteForward(fwdIniting, FwdReturn);
 	TypesNum = ArraySize(Types);
-	ExecuteForward(fwdInited, Return);
+	ExecuteForward(fwdInited, FwdReturn);
 
 	DestroyForward(fwdIniting);
 	DestroyForward(fwdInited);
@@ -97,11 +97,15 @@ public plugin_end() {
 public client_connect(id) {
 	ArrayClear(PlayersPunishment[id]);
 }
+
+public client_disconnected(id) {
+	remove_task(id);
+}
  
 public GMX_PlayerLoaded(const id, GripJSONValue:data) {
 	ArrayClear(PlayersPunishment[id]);
-	ExecuteForward(Forwards[FWD_PlayerChecking], Return, id);
-	if (Return == PLUGIN_HANDLED) {
+	ExecuteForward(Forwards[FWD_PlayerChecking], FwdReturn, id);
+	if (FwdReturn == PLUGIN_HANDLED) {
 		return;
 	}
 
@@ -115,13 +119,13 @@ public GMX_PlayerLoaded(const id, GripJSONValue:data) {
 		if (grip_json_get_type(tmp) == GripJSONObject) {
 			parsePunishment(tmp);
 			ArrayPushArray(PlayersPunishment[id], Punishment, sizeof Punishment);
-			ExecuteForward(Forwards[FWD_PlayerPunished], Return, id, Punishment[PunishmentType]);
+			ExecuteForward(Forwards[FWD_PlayerPunished], FwdReturn, id, Punishment[PunishmentType]);
 		}
 		grip_destroy_json_value(tmp);
 	}
 	grip_destroy_json_value(punishments);
 
-	ExecuteForward(Forwards[FWD_PlayerChecked], Return, id);
+	ExecuteForward(Forwards[FWD_PlayerChecked], FwdReturn, id);
 	// set_task_ex(1.0, "TaskCheckPlayer", id + 100, .flags = SetTask_Repeat);
 }
 
@@ -143,7 +147,7 @@ public OnPunished(const GmxResponseStatus:status, GripJSONValue:data, const user
 	parsePunishment(tmp);
 	grip_destroy_json_value(tmp);
 
-	ExecuteForward(Forwards[FWD_PlayerPunished], Return, id, Punishment[PunishmentType]);
+	ExecuteForward(Forwards[FWD_PlayerPunished], FwdReturn, id, Punishment[PunishmentType]);
 }
 
 parsePunishment(const GripJSONValue:punishment) {
@@ -156,6 +160,10 @@ parsePunishment(const GripJSONValue:punishment) {
 	new type[32];
 	grip_json_object_get_string(punishment, "type", type, charsmax(type));
 	Punishment[PunishmentReason] = ArrayFindString(Types, type);
+
+	tmp = grip_json_object_get_value(punishment, "extra");
+	Punishment[PunishmentExpired] = grip_json_get_type(tmp) != GripJSONNull ? grip_json_get_number(tmp) : 0;
+	grip_destroy_json_value(tmp);
 
 	tmp = grip_json_object_get_value(punishment, "expired_at");
 	Punishment[PunishmentExpired] = grip_json_get_type(tmp) != GripJSONNull ? grip_json_get_number(tmp) : 0;
@@ -195,6 +203,9 @@ public plugin_natives() {
 	register_native("APS_GetTypeIndex", "NativeGetTypeIndex", 0);
 	register_native("APS_GetTypeName", "NativeGetTypeName", 0);
 	register_native("APS_PunishPlayer", "NativePunishPlayer", 0);
+	register_native("APS_GetId", "NativeGetId", 0);
+	register_native("APS_GetExtra", "NativeGetExtra", 0);
+	register_native("APS_SetExtra", "NativeSetExtra", 0);
 	register_native("APS_GetTime", "NativeGetTime", 0);
 	register_native("APS_SetTime", "NativeSetTime", 0);
 	register_native("APS_GetExpired", "NativeGetExpired", 0);
@@ -240,7 +251,7 @@ public NativeGetTypeName(plugin, argc) {
 }
 
 public NativePunishPlayer(plugin, argc) {
-	enum { arg_player = 1, arg_type, arg_time, arg_reason, arg_details, arg_punisher_id };
+	enum { arg_player = 1, arg_type, arg_time, arg_reason, arg_details, arg_punisher_id, arg_extra };
 	arrayset(Punishment, 0, sizeof Punishment);
 
 	CHECK_NATIVE_ARGS_NUM(argc, 4, 0)
@@ -248,7 +259,7 @@ public NativePunishPlayer(plugin, argc) {
 	new player = get_param(arg_player);
 	CHECK_NATIVE_PLAYER(player, 0)
 
-	Punishment[PunishmentType] = get_param(arg_type)
+	Punishment[PunishmentType] = get_param(arg_type);
 	CHECK_NATIVE_TYPE_ERROR(Punishment[PunishmentType], 0)
 
 	Punishment[PunishmentTime] = get_param(arg_time);
@@ -261,9 +272,10 @@ public NativePunishPlayer(plugin, argc) {
 		Punishment[PunishmentPunisherID] = 0;
 		Punishment[PunishmentPunisherType] = APS_PunisherTypeServer;
 	}
+	Punishment[PunishmentExtra] = get_param(arg_extra);
 
-	ExecuteForward(Forwards[FWD_PlayerPunishing], Return, player, Punishment[PunishmentType]);
-	if (Return == PLUGIN_HANDLED) {
+	ExecuteForward(Forwards[FWD_PlayerPunishing], FwdReturn, player, Punishment[PunishmentType]);
+	if (FwdReturn == PLUGIN_HANDLED) {
 		return 0;
 	}
 
@@ -272,6 +284,11 @@ public NativePunishPlayer(plugin, argc) {
 	new type[APS_MAX_TYPE_LENGTH];
 	ArrayGetString(Types, Punishment[PunishmentType], type, charsmax(type));
 	grip_json_object_set_string(request, "type", type);
+	if (Punishment[PunishmentExtra] == 0) {
+		grip_json_object_set_null(request, "extra");
+	} else {
+		grip_json_object_set_number(request, "extra", Punishment[PunishmentExtra]);
+	}
 	grip_json_object_set_number(request, "time", Punishment[PunishmentTime]);
 	grip_json_object_set_string(request, "reason", Punishment[PunishmentReason]);
 	if (Punishment[PunishmentDetails][0] != EOS) {
@@ -299,6 +316,21 @@ public NativePunishPlayer(plugin, argc) {
 		GMX_MakeRequest("punish/immediately", request, "OnPunished", get_user_userid(player));
 	}
 
+	return 1;
+}
+
+public NativeGetId(plugin, argc) {
+	return Punishment[PunishmentID];
+}
+
+public NativeGetExtra(plugin, argc) {
+	return Punishment[PunishmentExtra];
+}
+
+public NativeSetExtra(plugin, argc) {
+	enum { arg_value = 1};
+	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
+	Punishment[PunishmentExtra] = get_param(arg_value);
 	return 1;
 }
 

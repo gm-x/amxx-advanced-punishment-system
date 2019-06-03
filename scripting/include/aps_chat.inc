@@ -1,0 +1,10 @@
+#if defined _aps_chat_included
+	#endinput
+#endif
+
+#define _aps_chat_included
+
+enum (<<=1) {
+    APS_Chat_Voice = 1,
+    APS_Chat_Text,
+}
