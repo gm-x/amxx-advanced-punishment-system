@@ -4,7 +4,7 @@
 #include <aps_chat>
 
 new TypeId;
-new bool:Muted[MAX_PLAYERS + 1];
+new Blocked[MAX_PLAYERS + 1];
 
 public plugin_init() {
 	register_plugin("[APS] Chat", "0.1.0", "GM-X Team");
@@ -13,6 +13,8 @@ public plugin_init() {
 		RegisterHookChain(RG_CSGameRules_CanPlayerHearPlayer, "CSGameRules_CanPlayerHearPlayer_Pre", false);
 	}
 	
+	register_clcmd("say", "CmdSay");
+	register_clcmd("say_team", "CmdSay");
 	register_concmd("aps_chat", "CmdChat", ADMIN_CHAT);
 	register_concmd("aps_mute", "CmdMute", ADMIN_CHAT);
 	register_concmd("aps_gag", "CmdGag", ADMIN_CHAT);
@@ -23,7 +25,7 @@ public APS_Initing() {
 }
 
 public client_connect(id) {
-	Muted[id] = false;
+	Blocked[id] = 0;
 }
 
 public APS_PlayerPunished(const id, const type) {
@@ -31,19 +33,26 @@ public APS_PlayerPunished(const id, const type) {
 		return;
 	}
 
-	Muted[id] = true;
-	if (has_vtc()) {
+	Blocked[id] = APS_GetExtra();
+	if (Blocked[id] & APS_Chat_Voice && has_vtc()) {
 		VTC_MuteClient(id);
 	}
 }
 
 public CSGameRules_CanPlayerHearPlayer_Pre(const listener, const sender) {
-	if (Muted[sender]) {
+	if (Blocked[sender] & APS_Chat_Voice) {
 		SetHookChainReturn(ATYPE_INTEGER, 0);
 		return HC_SUPERCEDE;
 	}
 
 	return HC_CONTINUE;
+}
+
+public CmdSay(const id) {
+	if (Blocked[id] & APS_Chat_Text) {
+		return PLUGIN_HANDLED_MAIN;
+	}
+	return PLUGIN_CONTINUE;
 }
 
 public CmdChat(const id, const level) {
