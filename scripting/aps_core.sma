@@ -20,6 +20,11 @@
 
 #define CHECK_NATIVE_TYPE(%1,%2) \
 	if (0 > %1 || %1 >= TypesNum) { \
+		return %2; \
+	}
+
+#define CHECK_NATIVE_TYPE_ERROR(%1,%2) \
+	if (0 > %1 || %1 >= TypesNum) { \
 		log_error(AMX_ERR_NATIVE, "Invalid type %d", %1); \
 		return %2; \
 	}
@@ -225,14 +230,13 @@ public NativeGetTypeIndex(plugin, argc) {
 public NativeGetTypeName(plugin, argc) {
 	enum { arg_type = 1, arg_value, arg_len };
 
-	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
+	CHECK_NATIVE_ARGS_NUM(argc, 1, -1)
 
 	new typeIndex = get_param(arg_type);
-	CHECK_NATIVE_TYPE(typeIndex, 0)
+	CHECK_NATIVE_TYPE(typeIndex, -1)
 	new type[APS_MAX_TYPE_LENGTH];
 	ArrayGetString(Types, typeIndex, type, charsmax(type));
-	set_string(arg_value, type, get_param(arg_len));
-	return 1;
+	return set_string(arg_value, type, get_param(arg_len));
 }
 
 public NativePunishPlayer(plugin, argc) {
@@ -245,7 +249,7 @@ public NativePunishPlayer(plugin, argc) {
 	CHECK_NATIVE_PLAYER(player, 0)
 
 	Punishment[PunishmentType] = get_param(arg_type)
-	CHECK_NATIVE_TYPE(Punishment[PunishmentType], 0)
+	CHECK_NATIVE_TYPE_ERROR(Punishment[PunishmentType], 0)
 
 	Punishment[PunishmentTime] = get_param(arg_time);
 	get_string(arg_reason, Punishment[PunishmentReason], charsmax(Punishment[PunishmentReason]));
@@ -329,8 +333,7 @@ public NativeGetReason(plugin, argc) {
 public NativeSetReason(plugin, argc) {
 	enum { arg_value = 1  };
 	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
-	get_string(arg_value, Punishment[PunishmentReason], charsmax(Punishment[PunishmentReason]));
-	return 1;
+	return get_string(arg_value, Punishment[PunishmentReason], charsmax(Punishment[PunishmentReason]));
 }
 
 public NativeGetDetails(plugin, argc) {
@@ -342,8 +345,7 @@ public NativeGetDetails(plugin, argc) {
 public NativeSetDetails(plugin, argc) {
 	enum { arg_value = 1  };
 	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
-	get_string(arg_value, Punishment[PunishmentDetails], charsmax(Punishment[PunishmentDetails]));
-	return 1;
+	return get_string(arg_value, Punishment[PunishmentDetails], charsmax(Punishment[PunishmentDetails]));
 }
 
 /*

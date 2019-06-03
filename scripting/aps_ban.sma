@@ -2,23 +2,7 @@
 // #include <gmx>
 #include <aps>
 
-const ACCESS_FLAG = ADMIN_BAN;
-
-#if !defined NOT_CLIENT
-	const NOT_CLIENT = 0;
-#endif
-
-#if !defined MAX_REASON_LENGTH
-	const MAX_REASON_LENGTH = 64;
-#endif
-
-#if !defined MAX_INFO_LENGTH
-	const MAX_INFO_LENGTH = 64;
-#endif
-
-#if !defined MAX_TIME_STRING_LENGTH
-	const MAX_TIME_STRING_LENGTH = 12;
-#endif
+#include "aps/aps_ban_console.inl"
 
 new TypeId;
 
@@ -26,6 +10,19 @@ public plugin_init() {
 	register_plugin("[APS] Ban", "0.1.0", "GM-X Team");
 	
 	register_concmd("aps_ban", "CmdBan", ADMIN_BAN);
+}
+
+public plugin_cfg() {
+	consoleParseConfig();
+}
+
+public plugin_end() {
+	if (ConsoleTokens != Invalid_Array) {
+		ArrayDestroy(ConsoleTokens);
+	}
+	if (ConsoleStrings != Invalid_Array) {
+		ArrayDestroy(ConsoleStrings);
+	}
 }
 
 public APS_Initing() {
@@ -37,7 +34,14 @@ public APS_PlayerPunished(const id, const type) {
 		return;
 	}
 	
-	server_cmd("kick #%d ^"%s^"", get_user_userid(id), "Вы забанени! Делали в консоли или на сайте");
+	consolePrint(id);
+	RequestFrame("HandleKick", id);
+}
+
+public HandleKick(const id) {
+	if (is_user_connected(id)) {
+		server_cmd("kick #%d ^"%s^"", get_user_userid(id), "Вы забанени! Делали в консоли или на сайте");
+	}
 }
 
 public CmdBan(const id, const level) {
@@ -66,6 +70,8 @@ public CmdBan(const id, const level) {
 	new reason[32], details[32];
 	read_argv(arg_reason, reason, charsmax(reason));
 	read_argv(arg_details, details, charsmax(details));
+
+	server_print("^t reason '%s'. details '%s'", reason, details);
 
 	APS_PunishPlayer(player, TypeId, time, reason, details, id);
 
