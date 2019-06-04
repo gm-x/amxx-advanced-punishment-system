@@ -2,7 +2,18 @@
 // #include <aps>
 // #include <aps_ban>
 // #include <aps_chat>
-// #include <aps_mixed>
+#include <aps_mixed>
+
+#define DISPLAY_CHAT(%1,%2,%3,%4) \
+	new players[MAX_PLAYERS]; \
+	new num = getPlayers(players, %1, %2); \
+	if (num > 0) { \
+		for (new i = 0, buffer[192]; i < num; i++) { \
+			SetGlobalTransTarget(players[i]); \
+			vformat(buffer, charsmax(buffer), %3, %4); \
+			client_print_color(players[i], id, "% %s", "APS_LOG_PREFIX", buffer); \
+		} \
+	}
 
 enum (<<=1) {
     APS_Chat_Voice = 1,
@@ -12,12 +23,6 @@ enum (<<=1) {
 forward APS_PlayerBanned(const admin, const id, const time, const reason[], const details[]);
 
 forward APS_PlayerBlockedChat(const admin, const id, const time, const reason[], const details[], const extra);
-
-forward APS_PlayerKicked(const admin, const id, const reason[]);
-
-forward APS_PlayerSlaped(const admin, const id, const damage);
-
-forward APS_PlayerSlayed(const admin, const id);
 
 // Show admins activity
 // 0 - disabled
@@ -61,81 +66,99 @@ public APS_PlayerBlockedChat(const admin, const id, const time, const reason[], 
 	}
 }
 
-public APS_PlayerKicked(const admin, const id, const reason[]) {
-	log_amx("Kick: %N kick %N (reason ^"%s^")", admin, id, reason);
-	if (showActivityName()) {
-		showActivity(true, id, "^1Admin ^4%n ^1kick ^3%n^1. Reason: ^4%s", admin, id, reason);
-	}
-	if (hideActivityName()) {
-		showActivity(true, id, "^1Admin kick ^3%n^1. Reason: ^4%s", id, reason);
-	}
-}
-
-public APS_PlayerSlaped(const admin, const id, const damage) {
-	log_amx("Cmd: %N slap with %d damage %N", admin, damage, id);
-	if (showActivityName()) {
-		showActivity(true, id, "^1Admin ^4%n ^1slap ^3%n ^1with ^4%d ^1damage", admin, id, damage);
-	}
-	if (hideActivityName()) {
-		showActivity(true, id, "^1Admin slap ^3%n ^1with ^4%d ^1damage", id, damage);
+public APS_PlayerKicked(const admin, const player, const reason[]) {
+	log_amx("Kick: %N kick %N (reason ^"%s^")", admin, player, reason);
+	if (admin == 0) {
+		if (ShowActivity != ShowActivityDisabled) {
+			showActivityServer(player, "^1Server kick ^3%n^1. Reason: ^4%s", player, reason);
+		}
+	} else {
+		if (showActivityName()) {
+			showActivity(true, player, "^1Admin ^4%n ^1kick ^3%n^1. Reason: ^4%s", admin, player, reason);
+		}
+		if (hideActivityName()) {
+			showActivity(false, player, "^1Admin kick ^3%n^1. Reason: ^4%s", player, reason);
+		}
 	}
 }
 
-public APS_PlayerSlayed(const admin, const id) {
-	log_amx("Cmd: %N slay %N", admin, id);
-	if (showActivityName()) {
-		showActivity(true, id, "^1Admin ^4%n ^1kill ^3%n", admin, id);
-	}
-	if (hideActivityName()) {
-		showActivity(false, id, "^1Admin kill ^3%n", id);
+public APS_PlayerSlaped(const admin, const player, const damage) {
+	log_amx("Cmd: %N slap with %d damage %N", admin, damage, player);
+	if (admin == 0) {
+		if (ShowActivity != ShowActivityDisabled) {
+			showActivityServer(player, "^1Server slap ^3%n ^1with ^4%d ^1damage", player, damage);
+		}
+	} else {
+		if (showActivityName()) {
+			showActivity(true, player, "^1Admin ^4%n ^1slap ^3%n ^1with ^4%d ^1damage", admin, player, damage);
+		}
+		if (hideActivityName()) {
+			showActivity(false, player, "^1Admin slap ^3%n ^1with ^4%d ^1damage", player, damage);
+		}
 	}
 }
 
-#define DISPLAY_CHAT(%1,%2) \
-	new players[MAX_PLAYERS]; \
-	new num = getPlayers(players, %1, %2); \
-	if (num > 0) { \
-		for (new i = 0, player, buffer[192]; i < num; i++) { \
-			player = players[i]; \
-			SetGlobalTransTarget(player); \
-			vformat(buffer, charsmax(buffer), fmt, 4); \
-			client_print_color(player, id, "%l %s", "APS_PREFIX", buffer); \
-		} \
+public APS_PlayerSlayed(const admin, const player) {
+	log_amx("Cmd: %N slay %N", admin, player);
+	if (admin == 0) {
+		if (ShowActivity != ShowActivityDisabled) {
+			showActivityServer(player, "^1Server kill ^3%n", player);
+		}
+	} else {
+		if (showActivityName()) {
+			showActivity(true, player, "^1Admin ^4%n ^1kill ^3%n", admin, player);
+		}
+		if (hideActivityName()) {
+			showActivity(false, player, "^1Admin kill ^3%n", player);
+		}
 	}
+}
 
-stock showActivity(const bool:adminnick, const id, const fmt[], any:...) {
+showActivityServer(const id, const fmt[], any:...) {
+	DISPLAY_CHAT(true, showActivityServerForPlayers(), fmt, 3)
+}
+
+showActivity(const bool:adminnick, const id, const fmt[], any:...) {
 	switch (ShowActivity) {
 		case ShowActivityHideName: {
 			if (!adminnick) {
-				DISPLAY_CHAT(true, true)
+				DISPLAY_CHAT(true, true, fmt, 4)
 			}
 		}
 		case ShowActivityAll: {
 			if (adminnick) {
-				DISPLAY_CHAT(true, true)
+				DISPLAY_CHAT(true, true, fmt, 4)
 			}
 		}
 		
 		case ShowActivityHideNamePlayers: {
 			if (adminnick) {
-				DISPLAY_CHAT(true, false)
+				DISPLAY_CHAT(true, false, fmt, 4)
 			} else {
-				DISPLAY_CHAT(false, true)
+				DISPLAY_CHAT(false, true, fmt, 4)
 			}
 		}
 		
 		case ShowActivityDisablePlayers: {
 			if (adminnick) {
-				DISPLAY_CHAT(true, false)
+				DISPLAY_CHAT(true, false, fmt, 4)
 			}
 		}
 		
 		case ShowActivityHideNameDisablePlayers: {
 			if (!adminnick) {
-				DISPLAY_CHAT(true, false)
+				DISPLAY_CHAT(true, false, fmt, 4)
 			}
 		}
 	}
+}
+
+stock bool:showActivityServerForPlayers() {
+	return bool: (
+		ShowActivity == ShowActivityHideName
+		|| ShowActivity == ShowActivityAll
+		|| ShowActivity == ShowActivityHideNamePlayers
+	);
 }
 
 bool:showActivityName() {

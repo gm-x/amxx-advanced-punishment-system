@@ -1,6 +1,16 @@
 #include <amxmodx>
+#include <aps>
 
-#define APS_MAX_REASON_LENGTH 32
+enum FWD {
+	FWD_PlayerKick,
+	FWD_PlayerKicked,
+	FWD_PlayerSlap,
+	FWD_PlayerSlaped,
+	FWD_PlayerSlay,
+	FWD_PlayerSlayed,
+}
+
+new Forwards[FWD], FwdReturn;
 
 public plugin_init() {
 	register_plugin("[APS] Mixed", "0.1.0", "GM-X Team");
@@ -12,6 +22,22 @@ public plugin_init() {
 	register_concmd("amx_kick", "CmdKick", ADMIN_KICK);
 	register_concmd("amx_slap", "CmdSlap", ADMIN_SLAY);
 	register_concmd("amx_slay", "CmdSlay", ADMIN_SLAY);
+
+	Forwards[FWD_PlayerKick] = CreateMultiForward("APS_PlayerKick", ET_STOP, FP_CELL, FP_CELL, FP_STRING);
+	Forwards[FWD_PlayerKicked] = CreateMultiForward("APS_PlayerKicked", ET_IGNORE, FP_CELL, FP_CELL, FP_STRING);
+	Forwards[FWD_PlayerSlap] = CreateMultiForward("APS_PlayerSlap", ET_STOP, FP_CELL, FP_CELL, FP_CELL);
+	Forwards[FWD_PlayerSlaped] = CreateMultiForward("APS_PlayerSlaped", ET_IGNORE, FP_CELL, FP_CELL, FP_CELL);
+	Forwards[FWD_PlayerSlay] = CreateMultiForward("APS_PlayerSlay", ET_STOP, FP_CELL, FP_CELL);
+	Forwards[FWD_PlayerSlayed] = CreateMultiForward("APS_PlayerSlayed", ET_IGNORE, FP_CELL, FP_CELL);
+}
+
+public plugin_end() {
+	DestroyForward(Forwards[FWD_PlayerKick]);
+	DestroyForward(Forwards[FWD_PlayerKicked]);
+	DestroyForward(Forwards[FWD_PlayerSlap]);
+	DestroyForward(Forwards[FWD_PlayerSlaped]);
+	DestroyForward(Forwards[FWD_PlayerSlay]);
+	DestroyForward(Forwards[FWD_PlayerSlayed]);
 }
 
 public CmdKick(const id, const level) {
@@ -39,9 +65,12 @@ public CmdKick(const id, const level) {
 	new reason[APS_MAX_REASON_LENGTH];
 	read_argv(arg_reason, reason, charsmax(reason));
 	remove_quotes(reason);
-	
-	playerKick(id, player, reason);
-	
+
+	if (!playerKick(id, player, reason)) {
+		console_print(id, "Kick was canceled");
+	} else {
+		console_print(id, "Player ^"%n^" kicked with reason ^"%s^"", player, reason);
+	}
 	return PLUGIN_HANDLED;
 }
 
@@ -69,8 +98,11 @@ public CmdSlap(const id, const level) {
 	
 	new damage = read_argv_int(arg_damage);
 
-	playerSlap(id, player, damage);
-	
+	if (!playerSlap(id, player, damage)) {
+		console_print(id, "Slap was canceled");
+	} else {
+		console_print(id, "Player ^"%n^" slaped with %d damage", player, damage);
+	}
 	return PLUGIN_HANDLED;
 }
 
@@ -96,8 +128,11 @@ public CmdSlay(const id, const level) {
 		return PLUGIN_HANDLED;
 	}
 	
-	playerSlay(id, player);
-	
+	if (!playerSlay(id, player)) {
+		console_print(id, "Slap was canceled");
+	} else {
+		console_print(id, "Player ^"%n^" slayed", player);
+	}
 	return PLUGIN_HANDLED;
 }
 
@@ -135,8 +170,7 @@ public NativeKick(plugin, argc) {
 	new reason[APS_MAX_REASON_LENGTH];
 	get_string(arg_reason, reason, charsmax(reason));
 	
-	playerKick(admin, player, reason);
-	return 1;
+	return playerKick(admin, player, reason) ? 1 : 0;
 }
 
 public NativeSlap(plugin, argc) {
@@ -153,8 +187,7 @@ public NativeSlap(plugin, argc) {
 	CHECK_NATIVE_PLAYER(player, 0)
 	
 	new damage = get_param(arg_damage);
-	playerSlap(admin, player, damage);
-	return 1;
+	return playerSlap(admin, player, damage) ? 1 : 0;
 }
 
 public NativeSlay(plugin, argc) {
@@ -170,47 +203,40 @@ public NativeSlay(plugin, argc) {
 	new player = get_param(arg_player);
 	CHECK_NATIVE_PLAYER(player, 0)
 
-	playerSlay(admin, player);
-	return 1;
+	return playerSlay(admin, player) ? 1 : 0;
 }
 
-playerKick(const admin, const player, const reason[]) {
-	#pragma unused admin
+bool:playerKick(const admin, const player, const reason[]) {
+	ExecuteForward(Forwards[FWD_PlayerKick], FwdReturn, admin, player, reason);
+	if (FwdReturn == PLUGIN_HANDLED) {
+		return false;
+	}
 	new userid = get_user_userid(player);
 	if (!is_user_bot(player) && reason[0] != EOS) {
 		server_cmd("kick #%d ^"%s^"", userid, reason);
 	} else {
 		server_cmd("kick #%d", userid);
 	}
-	
-	// log_amx("Kick: ^"%s<%d><%s><>^" kick ^"%s<%d><%s><>^" (reason ^"%s^")", name, get_user_userid(id), authid, name2, userid2, authid2, reason)
-
-	// show_activity_key("ADMIN_KICK_1", "ADMIN_KICK_2", name, name2);
+	ExecuteForward(Forwards[FWD_PlayerKicked], FwdReturn, admin, player, reason);
+	return true;
 }
 
-playerSlap(const admin, const player, const damage) {
-	#pragma unused admin
+bool:playerSlap(const admin, const player, const damage) {
+	ExecuteForward(Forwards[FWD_PlayerSlap], FwdReturn, admin, player, damage);
+	if (FwdReturn == PLUGIN_HANDLED) {
+		return false;
+	}
 	user_slap(player, damage);
+	ExecuteForward(Forwards[FWD_PlayerSlaped], FwdReturn, admin, player, damage);
+	return true;
 }
 
-playerSlay(const admin, const player) {
-	#pragma unused admin
+bool:playerSlay(const admin, const player) {
+	ExecuteForward(Forwards[FWD_PlayerSlay], FwdReturn, admin, player);
+	if (FwdReturn == PLUGIN_HANDLED) {
+		return false;
+	}
 	user_kill(player);
-}
-
-stock APS_FindPlayerByTarget(const buffer[]) {
-	if (buffer[0] == '#' && buffer[1]) {
-		return find_player_ex(FindPlayer_MatchUserId, str_to_num(buffer[1]));
-	}
-
-	new result = find_player_ex(FindPlayer_MatchAuthId, buffer);
-	if (!result) {
-		result = find_player_ex(FindPlayer_MatchIP, buffer);
-	}
-
-	if (!result) {
-		result = find_player_ex(FindPlayer_MatchNameSubstring | FindPlayer_CaseInsensitive|  FindPlayer_LastMatched, buffer);
-	}
-
-	return result;
+	ExecuteForward(Forwards[FWD_PlayerSlayed], FwdReturn, admin, player);
+	return true;
 }

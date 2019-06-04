@@ -72,7 +72,7 @@ public plugin_init() {
 }
 
 public plugin_cfg() {
-	new fwdIniting = CreateMultiForward("APS_Initing", ET_STOP);
+	new fwdIniting = CreateMultiForward("APS_Initing", ET_IGNORE);
 	new fwdInited = CreateMultiForward("APP_Inited", ET_IGNORE);
 
 	ExecuteForward(fwdIniting, FwdReturn);

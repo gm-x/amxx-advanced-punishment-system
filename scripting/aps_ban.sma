@@ -1,8 +1,21 @@
 #include <amxmodx>
 #include <aps>
 
+#define CHECK_NATIVE_ARGS_NUM(%1,%2,%3) \
+	if (%1 < %2) { \
+		log_error(AMX_ERR_NATIVE, "Invalid num of arguments %d. Expected %d", %1, %2); \
+		return %3; \
+	}
+ 
+#define CHECK_NATIVE_PLAYER(%1,%2) \
+	if (!is_user_connected(%1)) { \
+		log_error(AMX_ERR_NATIVE, "Invalid player %d", %1); \
+		return %2; \
+	}
+
 enum FWD {
 	FWD_PlayerBan,
+	FWD_PlayerBaned,
 }
 
 new Forwards[FWD], FwdReturn;
@@ -15,6 +28,7 @@ public plugin_init() {
 	register_concmd("aps_ban", "CmdBan", ADMIN_BAN);
 
 	Forwards[FWD_PlayerBan] = CreateMultiForward("APS_PlayerBan", ET_STOP, FP_CELL);
+	Forwards[FWD_PlayerBaned] = CreateMultiForward("APS_PlayerBaned", ET_IGNORE, FP_CELL);
 }
 
 public plugin_cfg() {
@@ -24,6 +38,7 @@ public plugin_cfg() {
 public plugin_end() {
 	consoleClear();
 	DestroyForward(Forwards[FWD_PlayerBan]);
+	DestroyForward(Forwards[FWD_PlayerBaned]);
 }
 
 public APS_Initing() {
@@ -81,18 +96,6 @@ public CmdBan(const id, const level) {
 
 	return PLUGIN_HANDLED;
 }
-
-#define CHECK_NATIVE_ARGS_NUM(%1,%2,%3) \
-	if (%1 < %2) { \
-		log_error(AMX_ERR_NATIVE, "Invalid num of arguments %d. Expected %d", %1, %2); \
-		return %3; \
-	}
- 
-#define CHECK_NATIVE_PLAYER(%1,%2) \
-	if (!is_user_connected(%1)) { \
-		log_error(AMX_ERR_NATIVE, "Invalid player %d", %1); \
-		return %2; \
-	}
 	
 public plugin_natives() {
 	register_native("APS_PlayerBan", "NativeBan", 0);
@@ -110,6 +113,8 @@ public NativeBan(plugin, argc) {
 
 	new player = get_param(arg_player);
 	CHECK_NATIVE_PLAYER(player, 0)
+
+	new time = get_param(arg_time) * 60;
 	
 	new reason[APS_MAX_REASON_LENGTH];
 	get_string(arg_reason, reason, charsmax(reason));
