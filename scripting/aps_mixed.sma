@@ -198,36 +198,6 @@ playerSlay(const admin, const player) {
 	user_kill(player);
 }
 
-// Show admins activity
-// 0 - disabled
-// 1 - show without admin name
-// 2 - show with name
-// 3 - show name only to admins, hide name from normal users
-// 4 - show name only to admins, show nothing to normal users
-// 5 - hide name only to admins, show nothing to normal users
-//
-// Default value: 2
-// amx_show_activity 2
-
-enum ShowActivity (+=1) {
-	ShowActivityDisabled = 0,
-	ShowActivityWithoutName,
-	ShowActivityWithName,
-	ShowActivityNameOnlyAdmins,
-	ShowActivityNameOnlyAdminsDisablePlayers,
-	ShowActivityOnlyAdminsDisablePlayers,
-}
-
-enum AdminCommand {
-	AdminCommandKick,
-	AdminCommandSlap,
-	AdminCommandSlay,
-}
-
-stock showActivity(const AdminCommand:cmd, const admin, const player) {
-	
-}
-
 stock APS_FindPlayerByTarget(const buffer[]) {
 	if (buffer[0] == '#' && buffer[1]) {
 		return find_player_ex(FindPlayer_MatchUserId, str_to_num(buffer[1]));
