@@ -2,7 +2,7 @@
 #include <aps>
 
 enum FWD {
-	FWD_PlayerKick,
+	FWD_PlayerBan,
 }
 
 new Forwards[FWD], FwdReturn;
@@ -14,7 +14,7 @@ public plugin_init() {
 	
 	register_concmd("aps_ban", "CmdBan", ADMIN_BAN);
 
-	Forwards[FWD_PlayerKick] = CreateMultiForward("APS_PlayerKick", ET_STOP, FP_CELL);
+	Forwards[FWD_PlayerBan] = CreateMultiForward("APS_PlayerBan", ET_STOP, FP_CELL);
 }
 
 public plugin_cfg() {
@@ -23,7 +23,7 @@ public plugin_cfg() {
 
 public plugin_end() {
 	consoleClear();
-	DestroyForward(Forwards[FWD_PlayerKick]);
+	DestroyForward(Forwards[FWD_PlayerBan]);
 }
 
 public APS_Initing() {
@@ -35,7 +35,7 @@ public APS_PlayerPunished(const id, const type) {
 		return;
 	}
 
-	ExecuteForward(Forwards[FWD_PlayerKick], FwdReturn, id);
+	ExecuteForward(Forwards[FWD_PlayerBan], FwdReturn, id);
 	if (FwdReturn == PLUGIN_HANDLED) {
 		return;
 	}
@@ -80,6 +80,45 @@ public CmdBan(const id, const level) {
 	APS_PunishPlayer(player, TypeId, time, reason, details, id);
 
 	return PLUGIN_HANDLED;
+}
+
+#define CHECK_NATIVE_ARGS_NUM(%1,%2,%3) \
+	if (%1 < %2) { \
+		log_error(AMX_ERR_NATIVE, "Invalid num of arguments %d. Expected %d", %1, %2); \
+		return %3; \
+	}
+ 
+#define CHECK_NATIVE_PLAYER(%1,%2) \
+	if (!is_user_connected(%1)) { \
+		log_error(AMX_ERR_NATIVE, "Invalid player %d", %1); \
+		return %2; \
+	}
+	
+public plugin_natives() {
+	register_native("APS_PlayerBan", "NativeBan", 0);
+}
+
+public NativeBan(plugin, argc) {
+	enum { arg_admin = 1, arg_player, arg_time, arg_reason, arg_details };
+
+	CHECK_NATIVE_ARGS_NUM(argc, 4, 0)
+	
+	new admin = get_param(arg_admin);
+	if (admin != 0) {
+		CHECK_NATIVE_PLAYER(admin, 0)
+	}
+
+	new player = get_param(arg_player);
+	CHECK_NATIVE_PLAYER(player, 0)
+	
+	new reason[APS_MAX_REASON_LENGTH];
+	get_string(arg_reason, reason, charsmax(reason));
+
+	new details[APS_MAX_DETAILS_LENGTH];
+	get_string(arg_details, details, charsmax(details));
+	
+	APS_PunishPlayer(player, TypeId, time, reason, details, admin);
+	return 1;
 }
 
 // CONSOLE OUTPUT
