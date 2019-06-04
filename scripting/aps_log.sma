@@ -52,6 +52,7 @@ public plugin_init() {
 	bind_pcvar_num(pcvar, ShowActivity);
 }
 
+/*
 public APS_PlayerBanned(const admin, const id, const time, const reason[], const details[]) {
 	log_amx("Punishment: %N ban %N (time %d mins.) (reason ^"%s^") (details ^"%s^")", admin, id, time, reason, details);
 }
@@ -65,6 +66,7 @@ public APS_PlayerBlockedChat(const admin, const id, const time, const reason[], 
 		log_amx("Punishment: %N block text chat %N (time %d mins.) (reason ^"%s^") (details ^"%s^")", admin, id, time, reason, details);
 	}
 }
+*/
 
 public APS_PlayerKicked(const admin, const player, const reason[]) {
 	log_amx("Kick: %N kick %N (reason ^"%s^")", admin, player, reason);
