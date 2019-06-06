@@ -10,7 +10,11 @@
 forward APS_Initing();
 forward APP_Inited();
 forward APS_PlayerPunishing(const id, const type);
-forward APS_PlayerPunished(const id, const type);
+forward APS_PlayerPunishing(const id, const type);
+forward APS_PlayerExonerating(const id, const type);
+forward APS_PlayerExonerated(const id, const type);
+forward APS_PlayerChecking(const id);
+forward APS_PlayerChecked(const id);
 
 native APS_RegisterType(const name[]);
 native APS_GetTypeIndex(const name[]);

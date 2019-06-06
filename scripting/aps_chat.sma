@@ -53,6 +53,18 @@ public APS_PlayerPunished(const id, const type) {
 	}
 }
 
+public APS_PlayerExonerated(const id, const type) {
+	if(type != TypeId) {
+		return;
+	}
+
+	new bool:hasBlocketVoice = (Blocked[id] & APS_Chat_Voice) ? true : false;
+	Blocked[id] &= ~APS_GetExtra();
+	if (hasBlocketVoice && !(Blocked[id] & APS_Chat_Voice) && has_vtc()) {
+		VTC_UnmuteClient(id);
+	}
+}
+
 public CSGameRules_CanPlayerHearPlayer_Pre(const listener, const sender) {
 	if (Blocked[sender] & APS_Chat_Voice) {
 		SetHookChainReturn(ATYPE_INTEGER, 0);
@@ -77,6 +89,11 @@ public CmdMute(const id, const level) {
 		return PLUGIN_HANDLED;
 	}
 
+	if (read_argc() < 2) {
+		console_print(id, "USAGE: aps_mute <steamID or nickname or #authid or IP> <time in mins> <reason> [details]");
+		return PLUGIN_HANDLED;
+	}
+
 	return processCommand(id, APS_Chat_Voice);
 }
 
@@ -86,16 +103,16 @@ public CmdGag(const id, const level) {
 		return PLUGIN_HANDLED;
 	}
 
+	if (read_argc() < 2) {
+		console_print(id, "USAGE: aps_gag <steamID or nickname or #authid or IP> <time in mins> <reason> [details]");
+		return PLUGIN_HANDLED;
+	}
+
 	return processCommand(id, APS_Chat_Text);
 }
 
 processCommand(const id, const extra) {
 	enum { arg_player = 1, arg_time, arg_reason, arg_details };
-	
-	if (read_argc() < 2) {
-		console_print(id, "USAGE: aps_mute <steamID or nickname or #authid or IP> <time in mins> <reason> [details]");
-		return PLUGIN_HANDLED;
-	}
 
 	new tmp[32];
 	read_argv(arg_player, tmp, charsmax(tmp));
@@ -105,7 +122,8 @@ processCommand(const id, const extra) {
 		return PLUGIN_HANDLED;
 	}
 
-	new time = read_argv_int(arg_time) * 60;
+	// new time = read_argv_int(arg_time) * 60;
+	new time = read_argv_int(arg_time);
 
 	new reason[32], details[32];
 	read_argv(arg_reason, reason, charsmax(reason));

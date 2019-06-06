@@ -32,6 +32,8 @@
 enum FWD {
 	FWD_PlayerPunishing,
 	FWD_PlayerPunished,
+	FWD_PlayerExonerating,
+	FWD_PlayerExonerated,
 	FWD_PlayerChecking,
 	FWD_PlayerChecked,
 }
@@ -67,6 +69,8 @@ public plugin_init() {
 
 	Forwards[FWD_PlayerPunishing] = CreateMultiForward("APS_PlayerPunishing", ET_STOP, FP_CELL, FP_CELL);
 	Forwards[FWD_PlayerPunished] = CreateMultiForward("APS_PlayerPunished", ET_IGNORE, FP_CELL, FP_CELL);
+	Forwards[FWD_PlayerExonerating] = CreateMultiForward("APS_PlayerExonerating", ET_STOP, FP_CELL, FP_CELL);
+	Forwards[FWD_PlayerExonerated] = CreateMultiForward("APS_PlayerExonerated", ET_IGNORE, FP_CELL, FP_CELL);
 	Forwards[FWD_PlayerChecking] = CreateMultiForward("APS_PlayerChecking", ET_STOP, FP_CELL);
 	Forwards[FWD_PlayerChecked] = CreateMultiForward("APS_PlayerChecked", ET_IGNORE, FP_CELL);
 }
@@ -90,6 +94,8 @@ public plugin_end() {
 	}
 	DestroyForward(Forwards[FWD_PlayerPunishing]);
 	DestroyForward(Forwards[FWD_PlayerPunished]);
+	DestroyForward(Forwards[FWD_PlayerExonerating]);
+	DestroyForward(Forwards[FWD_PlayerExonerated]);
 	DestroyForward(Forwards[FWD_PlayerChecking]);
 	DestroyForward(Forwards[FWD_PlayerChecked]);
 }
@@ -114,19 +120,23 @@ public GMX_PlayerLoaded(const id, GripJSONValue:data) {
 		return;
 	}
 
+	new bool:hasPunishments = false;
 	for (new i = 0, n = grip_json_array_get_count(punishments), GripJSONValue:tmp; i < n; i++) {
 		tmp = grip_json_array_get_value(punishments, i);
 		if (grip_json_get_type(tmp) == GripJSONObject) {
 			parsePunishment(tmp);
 			ArrayPushArray(PlayersPunishment[id], Punishment, sizeof Punishment);
 			ExecuteForward(Forwards[FWD_PlayerPunished], FwdReturn, id, Punishment[PunishmentType]);
+			hasPunishments = true;
 		}
 		grip_destroy_json_value(tmp);
 	}
 	grip_destroy_json_value(punishments);
 
 	ExecuteForward(Forwards[FWD_PlayerChecked], FwdReturn, id);
-	// set_task_ex(1.0, "TaskCheckPlayer", id + 100, .flags = SetTask_Repeat);
+	if (hasPunishments) {
+		set_task_ex(1.0, "TaskCheckPlayer", id + 100, .flags = SetTask_Repeat);
+	} 
 }
 
 public OnPunished(const GmxResponseStatus:status, GripJSONValue:data, const userid) {
@@ -146,8 +156,46 @@ public OnPunished(const GmxResponseStatus:status, GripJSONValue:data, const user
 	new GripJSONValue:tmp = grip_json_object_get_value(data, "punishment");
 	parsePunishment(tmp);
 	grip_destroy_json_value(tmp);
-
+	ArrayPushArray(PlayersPunishment[id], Punishment, sizeof Punishment);
 	ExecuteForward(Forwards[FWD_PlayerPunished], FwdReturn, id, Punishment[PunishmentType]);
+
+	if (!task_exists(id + 100)) {
+		set_task_ex(1.0, "TaskCheckPlayer", id + 100, .flags = SetTask_Repeat);
+	}
+}
+
+public TaskCheckPlayer(id) {
+	id -= 100;
+
+	if (!is_user_connected(id)) {
+		return;
+	}
+
+	new now = get_systime(), active = 0;
+	for (new i = 0, n = ArraySize(PlayersPunishment[id]); i < n; i++) {
+		ArrayGetArray(PlayersPunishment[id], i, Punishment, sizeof Punishment);
+		if (Punishment[PunishmentStatus] != APS_PunishmentStatusActive) {
+			continue;
+		}
+		if (Punishment[PunishmentExpired] > now) {
+			active++;
+			continue;
+		}
+		
+		ExecuteForward(Forwards[FWD_PlayerExonerating], FwdReturn, id, Punishment[PunishmentType]);
+		if (FwdReturn != PLUGIN_HANDLED) {
+			Punishment[PunishmentStatus] = APS_PunishmentStatusExpired
+			ArraySetArray(PlayersPunishment[id], i, Punishment, sizeof Punishment);
+			ExecuteForward(Forwards[FWD_PlayerExonerated], FwdReturn, id, Punishment[PunishmentType]);
+		} else {
+			active++;
+		}
+	}
+
+	if (active == 0) {
+		remove_task(id + 100);
+		server_print("^t REMOVE TASK");
+	}
 }
 
 parsePunishment(const GripJSONValue:punishment) {
@@ -180,22 +228,6 @@ parsePunishment(const GripJSONValue:punishment) {
 		grip_json_get_string(tmp, Punishment[PunishmentDetails], charsmax(Punishment[PunishmentDetails]));
 	}
 	grip_destroy_json_value(tmp);
-}
-
-public TaskCheckPlayer(id) {
-	id -= 100;
-
-	if (!is_user_connected(id)) {
-		return;
-	}
-
-	new now = get_systime();
-	for (new i = 0, n = ArraySize(PlayersPunishment[id]); i < n; i++) {
-		ArrayGetArray(PlayersPunishment[id], i, Punishment, sizeof Punishment);
-		if (Punishment[PunishmentStatus] == APS_PunishmentStatusActive && Punishment[PunishmentExpired] <= now) {
-			// TODO: unpunish player
-		}
-	}
 }
 
 public plugin_natives() {
