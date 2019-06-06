@@ -122,8 +122,7 @@ processCommand(const id, const extra) {
 		return PLUGIN_HANDLED;
 	}
 
-	// new time = read_argv_int(arg_time) * 60;
-	new time = read_argv_int(arg_time);
+	new time = read_argv_int(arg_time) * 60;
 
 	new reason[32], details[32];
 	read_argv(arg_reason, reason, charsmax(reason));
