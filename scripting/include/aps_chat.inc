@@ -8,3 +8,5 @@ enum (<<=1) {
     APS_Chat_Voice = 1,
     APS_Chat_Text,
 }
+
+native APS_ChatGetBlocketType(const player);

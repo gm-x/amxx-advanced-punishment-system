@@ -159,10 +159,10 @@ parsePunishment(const GripJSONValue:punishment) {
 
 	new type[32];
 	grip_json_object_get_string(punishment, "type", type, charsmax(type));
-	Punishment[PunishmentReason] = ArrayFindString(Types, type);
+	Punishment[PunishmentType] = ArrayFindString(Types, type);
 
 	tmp = grip_json_object_get_value(punishment, "extra");
-	Punishment[PunishmentExpired] = grip_json_get_type(tmp) != GripJSONNull ? grip_json_get_number(tmp) : 0;
+	Punishment[PunishmentExtra] = grip_json_get_type(tmp) != GripJSONNull ? grip_json_get_number(tmp) : 0;
 	grip_destroy_json_value(tmp);
 
 	tmp = grip_json_object_get_value(punishment, "expired_at");

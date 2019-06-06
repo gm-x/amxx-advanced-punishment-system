@@ -3,6 +3,18 @@
 #include <aps>
 #include <aps_chat>
 
+#define CHECK_NATIVE_ARGS_NUM(%1,%2,%3) \
+	if (%1 < %2) { \
+		log_error(AMX_ERR_NATIVE, "Invalid num of arguments %d. Expected %d", %1, %2); \
+		return %3; \
+	}
+ 
+#define CHECK_NATIVE_PLAYER(%1,%2) \
+	if (!is_user_connected(%1)) { \
+		log_error(AMX_ERR_NATIVE, "Invalid player %d", %1); \
+		return %2; \
+	}
+
 new TypeId;
 new Blocked[MAX_PLAYERS + 1];
 
@@ -13,8 +25,6 @@ public plugin_init() {
 		RegisterHookChain(RG_CSGameRules_CanPlayerHearPlayer, "CSGameRules_CanPlayerHearPlayer_Pre", false);
 	}
 	
-	register_clcmd("say", "CmdSay");
-	register_clcmd("say_team", "CmdSay");
 	register_concmd("aps_chat", "CmdChat", ADMIN_CHAT);
 	register_concmd("aps_mute", "CmdMute", ADMIN_CHAT);
 	register_concmd("aps_gag", "CmdGag", ADMIN_CHAT);
@@ -25,6 +35,10 @@ public APS_Initing() {
 }
 
 public client_connect(id) {
+	Blocked[id] = 0;
+}
+
+public client_disconnected(id) {
 	Blocked[id] = 0;
 }
 
@@ -46,13 +60,6 @@ public CSGameRules_CanPlayerHearPlayer_Pre(const listener, const sender) {
 	}
 
 	return HC_CONTINUE;
-}
-
-public CmdSay(const id) {
-	if (Blocked[id] & APS_Chat_Text) {
-		return PLUGIN_HANDLED_MAIN;
-	}
-	return PLUGIN_CONTINUE;
 }
 
 public CmdChat(const id, const level) {
@@ -107,4 +114,19 @@ processCommand(const id, const extra) {
 	APS_PunishPlayer(player, TypeId, time, reason, details, id, extra);
 
 	return PLUGIN_HANDLED;
+}
+
+public plugin_natives() {
+	register_native("APS_ChatGetBlocketType", "NativeChatGetBlocketType", 0);
+}
+
+public NativeChatGetBlocketType(plugin, argc) {
+	enum { arg_player = 1 };
+
+	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
+
+	new player = get_param(arg_player);
+	CHECK_NATIVE_PLAYER(player, 0)
+
+	return Blocked[player];
 }

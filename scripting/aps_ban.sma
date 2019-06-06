@@ -14,8 +14,7 @@
 	}
 
 enum FWD {
-	FWD_PlayerBan,
-	FWD_PlayerBaned,
+	FWD_PlayerBanKick,
 }
 
 new Forwards[FWD], FwdReturn;
@@ -27,8 +26,7 @@ public plugin_init() {
 	
 	register_concmd("aps_ban", "CmdBan", ADMIN_BAN);
 
-	Forwards[FWD_PlayerBan] = CreateMultiForward("APS_PlayerBan", ET_STOP, FP_CELL);
-	Forwards[FWD_PlayerBaned] = CreateMultiForward("APS_PlayerBaned", ET_IGNORE, FP_CELL);
+	Forwards[FWD_PlayerBanKick] = CreateMultiForward("APS_PlayerBanKick", ET_STOP, FP_CELL);
 }
 
 public plugin_cfg() {
@@ -37,8 +35,7 @@ public plugin_cfg() {
 
 public plugin_end() {
 	consoleClear();
-	DestroyForward(Forwards[FWD_PlayerBan]);
-	DestroyForward(Forwards[FWD_PlayerBaned]);
+	DestroyForward(Forwards[FWD_PlayerBanKick]);
 }
 
 public APS_Initing() {
@@ -50,7 +47,7 @@ public APS_PlayerPunished(const id, const type) {
 		return;
 	}
 
-	ExecuteForward(Forwards[FWD_PlayerBan], FwdReturn, id);
+	ExecuteForward(Forwards[FWD_PlayerBanKick], FwdReturn, id);
 	if (FwdReturn == PLUGIN_HANDLED) {
 		return;
 	}
@@ -95,35 +92,6 @@ public CmdBan(const id, const level) {
 	APS_PunishPlayer(player, TypeId, time, reason, details, id);
 
 	return PLUGIN_HANDLED;
-}
-	
-public plugin_natives() {
-	register_native("APS_PlayerBan", "NativeBan", 0);
-}
-
-public NativeBan(plugin, argc) {
-	enum { arg_admin = 1, arg_player, arg_time, arg_reason, arg_details };
-
-	CHECK_NATIVE_ARGS_NUM(argc, 4, 0)
-	
-	new admin = get_param(arg_admin);
-	if (admin != 0) {
-		CHECK_NATIVE_PLAYER(admin, 0)
-	}
-
-	new player = get_param(arg_player);
-	CHECK_NATIVE_PLAYER(player, 0)
-
-	new time = get_param(arg_time) * 60;
-	
-	new reason[APS_MAX_REASON_LENGTH];
-	get_string(arg_reason, reason, charsmax(reason));
-
-	new details[APS_MAX_DETAILS_LENGTH];
-	get_string(arg_details, details, charsmax(details));
-	
-	APS_PunishPlayer(player, TypeId, time, reason, details, admin);
-	return 1;
 }
 
 // CONSOLE OUTPUT
