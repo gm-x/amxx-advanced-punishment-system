@@ -55,13 +55,13 @@ native APS_SetDetails(const value[]);
 * Do not modify this!
 */
 public __aps_version_check(const majorVersion, const minorVersion) {
-    if(majorVersion != APS_MAJOR_VERSION) {
-        set_fail_state("Api major version mismatch; expected %d, real %d", APS_MAJOR_VERSION, majorVersion);
-        return;
-    }
+	if(majorVersion != APS_MAJOR_VERSION) {
+		set_fail_state("Api major version mismatch; expected %d, real %d", APS_MAJOR_VERSION, majorVersion);
+		return;
+	}
 
-    if(minorVersion < APS_MINOR_VERSION){
-        set_fail_state("Api minor version mismatch; expected at least %d, real %d", APS_MINOR_VERSION, minorVersion);
-        return;
-    }
+	if(minorVersion < APS_MINOR_VERSION){
+		set_fail_state("Api minor version mismatch; expected at least %d, real %d", APS_MINOR_VERSION, minorVersion);
+		return;
+	}
 }

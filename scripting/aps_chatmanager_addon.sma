@@ -14,5 +14,5 @@ public plugin_init() {
 }
 
 public cm_player_send_message(const id) {
-    return APS_ChatGetBlocketType(id) & APS_Chat_Text ? MESSAGE_BLOCKED : MESSAGE_IGNORED;
+	return APS_ChatGetBlocketType(id) & APS_Chat_Text ? MESSAGE_BLOCKED : MESSAGE_IGNORED;
 }
