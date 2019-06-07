@@ -7,6 +7,12 @@
 #include <aps_consts>
 #include <aps_stocks>
 
+#define APS_MAJOR_VERSION			0
+#define APS_MINOR_VERSION			1
+#define APS_MAINTENANCE_VERSION		1
+
+stock const APS_API_VERSION_STR[] = "0.1.0";
+
 forward APS_Initing();
 forward APP_Inited();
 forward APS_PlayerPunishing(const id, const type);
@@ -31,3 +37,31 @@ native APS_GetReason(value[], const len);
 native APS_SetReason(const value[]);
 native APS_GetDetails(value[], const len);
 native APS_SetDetails(const value[]);
+
+#define CHECK_NATIVE_ARGS_NUM(%1,%2,%3) \
+	if (%1 < %2) { \
+		log_error(AMX_ERR_NATIVE, "Invalid num of arguments %d. Expected %d", %1, %2); \
+		return %3; \
+	}
+ 
+#define CHECK_NATIVE_PLAYER(%1,%2) \
+	if (!is_user_connected(%1)) { \
+		log_error(AMX_ERR_NATIVE, "Invalid player %d", %1); \
+		return %2; \
+	}
+
+/*
+* This is callback from APS Core that gives major/minor versions for verifying compatibility for APS versions.
+* Do not modify this!
+*/
+public __aps_version_check(const majorVersion, const minorVersion) {
+    if(majorVersion != APS_MAJOR_VERSION) {
+        set_fail_state("Api major version mismatch; expected %d, real %d", APS_MAJOR_VERSION, majorVersion);
+        return;
+    }
+
+    if(minorVersion < APS_MINOR_VERSION){
+        set_fail_state("Api minor version mismatch; expected at least %d, real %d", APS_MINOR_VERSION, minorVersion);
+        return;
+    }
+}
