@@ -46,7 +46,7 @@ public APS_PlayerPunished(const id, const type) {
 
 public HandleKick(const id) {
 	if (is_user_connected(id)) {
-		server_cmd("kick #%d ^"%s^"", get_user_userid(id), "Вы забанени! Делали в консоли или на сайте");
+		server_cmd("kick #%d ^"%s^"", get_user_userid(id), "Вы были забанены! Детали в консоли или на сайте.");
 	}
 }
 
