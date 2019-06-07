@@ -82,7 +82,7 @@ public plugin_cfg() {
 	DestroyForward(fwdIniting);
 	DestroyForward(fwdInited);
 
-	CheckCoreVersion();
+	checkAPIVersion();
 }
 
 public plugin_end() {
@@ -438,7 +438,7 @@ public NativeCheckPlayer(plugin, params) {
 }
 */
 
-CheckCoreVersion() {
+checkAPIVersion() {
 	for(new i, n = get_pluginsnum(), status[2], func; i < n; i++) {
 		if(i == PluginId) {
 			continue;
