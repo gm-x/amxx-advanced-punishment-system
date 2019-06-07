@@ -5,10 +5,29 @@
 #define _aps_included
 
 #include <aps_consts>
+#include <aps_stocks>
 
-forward APS_Init();
-forward APS_TypeRegistered(const name[], const desc[]);
-//forward APS_PunishedPlayerPost(const id, const typeId, const expired);
+forward APS_Initing();
+forward APP_Inited();
+forward APS_PlayerPunishing(const id, const type);
+forward APS_PlayerPunishing(const id, const type);
+forward APS_PlayerExonerating(const id, const type);
+forward APS_PlayerExonerated(const id, const type);
+forward APS_PlayerChecking(const id);
+forward APS_PlayerChecked(const id);
 
-//native APS_RegisterType(const name[], const description[]);
-//native APS_PunishPlayer(const id, const typeId, const expired, const reason[], const details[] = "", const APS_PunisherType:punisherType = APS_PunisherTypeServer, const punisherId = 0);
+native APS_RegisterType(const name[]);
+native APS_GetTypeIndex(const name[]);
+native APS_GetTypeName(const index, value[], len);
+native APS_PunishPlayer(const id, const type, const time, const reason[], const details[] = "", const punisherId = 0, const extra = 0);
+native APS_GetId();
+native APS_GetExtra();
+native APS_SetExtra(const value);
+native APS_GetTime();
+native APS_SetTime(const value);
+native APS_GetExpired();
+native APS_SetExpired(const value);
+native APS_GetReason(value[], const len);
+native APS_SetReason(const value[]);
+native APS_GetDetails(value[], const len);
+native APS_SetDetails(const value[]);

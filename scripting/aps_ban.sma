@@ -1,131 +1,330 @@
 #include <amxmodx>
-#include <grip>
-#include <gmx>
-//#include <aps>
+#include <aps>
 
-const ACCESS_FLAG = ADMIN_BAN;
+#define CHECK_NATIVE_ARGS_NUM(%1,%2,%3) \
+	if (%1 < %2) { \
+		log_error(AMX_ERR_NATIVE, "Invalid num of arguments %d. Expected %d", %1, %2); \
+		return %3; \
+	}
+ 
+#define CHECK_NATIVE_PLAYER(%1,%2) \
+	if (!is_user_connected(%1)) { \
+		log_error(AMX_ERR_NATIVE, "Invalid player %d", %1); \
+		return %2; \
+	}
 
-new const BANCMD[] = "amx_ban";
-new const PUNISH_TYPE_NAME[] = "ban";
+enum FWD {
+	FWD_PlayerBanKick,
+}
 
-#if !defined NOT_CLIENT
-	const NOT_CLIENT = 0;
-#endif
+new Forwards[FWD], FwdReturn;
 
-#if !defined MAX_REASON_LENGTH
-    const MAX_REASON_LENGTH = 64;
-#endif
-
-#if !defined MAX_INFO_LENGTH
-    const MAX_INFO_LENGTH = 64;
-#endif
-
-#if !defined MAX_TIME_STRING_LENGTH
-    const MAX_TIME_STRING_LENGTH = 12;
-#endif
-
-enum _:ArgsType {
-    ARG_Time = 1,
-    ARG_PlayerInfo,
-    ARG_Reason
-};
-
-enum APS_PunisherType {
-    APS_PunisherTypePlayer,
-    APS_PunisherTypeUser,
-    APS_PunisherTypeServer
-};
-
-new g_BanTypeId;
-
-forward GMX_PlayerLoaded(const id, const arg2, const GripJSONValue:data);
-
-forward APS_Init();
-forward APS_TypeRegistered(const typeId, const name[]);
-forward APS_PunishedPlayerPost(const id, const typeId, const expired);
-
-native APS_RegisterType(const name[], const description[]);
-native APS_PunishPlayer(const id, const typeId, const expired, const reason[], const details[] = "", const APS_PunisherType:punisherType = APS_PunisherTypeServer, const punisherId = 0);
+new TypeId;
 
 public plugin_init() {
-    register_plugin("[APS] Ban", "0.1.0", "GM-X Team");
-    
-    register_concmd(BANCMD, "CmdBan", ACCESS_FLAG);
+	register_plugin("[APS] Ban", "0.1.0", "GM-X Team");
+	
+	register_concmd("aps_ban", "CmdBan", ADMIN_BAN);
+
+	Forwards[FWD_PlayerBanKick] = CreateMultiForward("APS_PlayerBanKick", ET_STOP, FP_CELL);
 }
 
-public APS_Init() {
-    APS_RegisterType(PUNISH_TYPE_NAME, "Ban");
+public plugin_cfg() {
+	consoleParseConfig();
 }
 
-public APS_TypeRegistered(const typeId, const name[]) {
-    if(equal(name, PUNISH_TYPE_NAME)) {
-        g_BanTypeId = typeId;
-    }
+public plugin_end() {
+	consoleClear();
+	DestroyForward(Forwards[FWD_PlayerBanKick]);
 }
 
-public GMX_PlayerLoaded(const id, const arg2, const GripJSONValue:data) {
-
+public APS_Initing() {
+	TypeId = APS_RegisterType("ban");
 }
 
-public APS_PunishedPlayerPost(const id, const typeId, const expired) {
-    if(typeId != g_BanTypeId) {
-        return PLUGIN_CONTINUE;
-    }
-    
-    server_cmd("kick #%d", get_user_userid(id));
+public APS_PlayerPunished(const id, const type) {
+	if(type != TypeId) {
+		return;
+	}
 
-    return PLUGIN_CONTINUE;
+	ExecuteForward(Forwards[FWD_PlayerBanKick], FwdReturn, id);
+	if (FwdReturn == PLUGIN_HANDLED) {
+		return;
+	}
+	
+	consolePrint(id);
+	RequestFrame("HandleKick", id);
+}
+
+public HandleKick(const id) {
+	if (is_user_connected(id)) {
+		server_cmd("kick #%d ^"%s^"", get_user_userid(id), "Вы забанени! Делали в консоли или на сайте");
+	}
 }
 
 public CmdBan(const id, const level) {
-    if(~get_user_flags(id) & level) {
-        client_print(id, print_console, "You have not access to this command!");
-        return PLUGIN_HANDLED;
-    }
+	enum { arg_player = 1, arg_time, arg_reason, arg_details };
 
-    if(read_argc() < ArgsType) {
-        // Посылаем сообщения по отдельности, потому что клиенсткая консоль ограничена 127 байтами (дабы не упереться в лимит)
-        // https://github.com/alliedmodders/amxmodx/blob/1cc7786a4c260ca9ad55fa9fd1c8c415115ead89/amxmodx/amxmodx.cpp#L181
-        console_print(id, "* Invalid command syntax!");
-        console_print(id, "* Structure: %s <time> <#userid/name/steamid> <reason>", BANCMD);
-        console_print(id, "* Example: %s 60 ^"Player Name^" ^"Example Reason^"", BANCMD);
-        console_print(id, "* Importantly! Nickname or reason with a space must be limited to quotes!");
+	if(~get_user_flags(id) & level) {
+		console_print(id, "You have not access to this command!");
+		return PLUGIN_HANDLED;
+	}
 
-        return PLUGIN_HANDLED;
-    }
+	if (read_argc() < 2) {
+		console_print(id, "USAGE: aps_ban <steamID or nickname or #authid or IP> <time in mins> <reason> [details]");
+		return PLUGIN_HANDLED;
+	}
 
-    new time[MAX_TIME_STRING_LENGTH], playerData[MAX_INFO_LENGTH], reason[MAX_REASON_LENGTH];
+	new tmp[32];
+	read_argv(arg_player, tmp, charsmax(tmp));
+	new player = APS_FindPlayerByTarget(tmp);
+	if (!player) {
+		console_print(id, "Player not found");
+		return PLUGIN_HANDLED;
+	}
 
-    read_argv(ARG_Time, time, charsmax(time)); 
-    read_argv(ARG_PlayerInfo, playerData, charsmax(playerData)); 
-    read_argv(ARG_Reason, reason, charsmax(reason));
+	new time = read_argv_int(arg_time) * 60;
 
-    new playerId = FindClientIndexByTarget(id, playerData);
-    new banTime = str_to_num(time);
+	new reason[32], details[32];
+	read_argv(arg_reason, reason, charsmax(reason));
+	read_argv(arg_details, details, charsmax(details));
 
-    APS_PunishPlayer(playerId, g_BanTypeId, banTime, reason, "Descriptin: Игрок получил бан", APS_PunisherTypePlayer, id);
+	APS_PunishPlayer(player, TypeId, time, reason, details, id);
 
-    return PLUGIN_HANDLED;
+	return PLUGIN_HANDLED;
 }
 
-FindClientIndexByTarget(const id, const buffer[]) {
-    new clientId = find_player_ex(FindPlayer_MatchNameSubstring|FindPlayer_CaseInsensitive, buffer);
+// CONSOLE OUTPUT
+enum TokenEnum (+=1) {
+	TokenInvalid = -1,
+	TokenPercent,
+	TokenNewLine,
+	TokenString,
+	TokenBanId,
+	TokenPlayerName,
+	TokenPlayerIP,
+	TokenPlayerSteamID,
+	TokenReason,
+	TokenCreated,
+	TokenTime,
+	TokenLeft,
+	TokenExpired,
+}
 
-    if(clientId) {
-        if(clientId != find_player_ex(FindPlayer_MatchNameSubstring|FindPlayer_CaseInsensitive|FindPlayer_LastMatched, buffer)) {
-            console_print(id, "* No players found for your request!");
-            return NOT_CLIENT;
-        }
-    } else if(
-    	buffer[0] == '#' && buffer[1] &&
-    	!(clientId = find_player_ex(FindPlayer_MatchAuthId, buffer)) || 
-    	!(clientId = find_player_ex(FindPlayer_MatchIP, buffer))) 
-    {
-        clientId = find_player_ex(FindPlayer_MatchUserId, str_to_num(buffer[1]));
-	} else {
-        console_print(id, "* Player with this nickname or userID not found!");
-        return NOT_CLIENT;
-    }
+enum _:TokenStruct {
+	TokenEnum:TokenInfoID,
+	TokenInfoExtra
+}
+new Array:ConsoleTokens = Invalid_Array;
+new Array:ConsoleStrings = Invalid_Array;
+new Token[TokenStruct];
 
-    return clientId;
+consoleParseConfig() {
+	new path[128];
+	get_localinfo("amxx_configsdir", path, charsmax(path));
+	add(path, charsmax(path), "/abs_ban_console.txt");
+
+	new file = fopen(path, "rt");
+	if (!file) {
+		return;
+	}
+
+	ConsoleTokens = ArrayCreate(TokenStruct, 0);
+	ConsoleStrings = ArrayCreate(192, 0);
+
+	new line[256];
+	new semicolonPos;
+
+	while (!feof(file)) {
+		fgets(file, line, charsmax(line));
+
+		if ((semicolonPos = contain(line, ";")) != -1) {
+			line[semicolonPos] = EOS;
+		}
+
+		trim(line);
+		consoleParseLine(line);
+	}
+
+	fclose(file);
+
+	arrayset(Token, 0, sizeof Token);
+	ArrayGetArray(ConsoleTokens, ArraySize(ConsoleTokens) - 1, Token, sizeof Token);
+	if (Token[TokenInfoID] != TokenNewLine) {
+		arrayset(Token, 0, sizeof Token);
+		Token[TokenInfoID] = TokenNewLine;
+		ArrayPushArray(ConsoleTokens, Token, sizeof Token);
+	}
+}
+
+consoleParseLine(const tpl[]) {
+	new bool:newLine = true, bool:opened = false, tmp[192], len = 0, TokenEnum:tkn;
+	for (new i = 0; tpl[i] != EOS; i++) {
+		if (opened) {
+			if (tpl[i] != '%') {
+				tmp[len++] = tpl[i];
+			} else if (len == 0) {
+				newLine = consolePushToken(TokenPercent, newLine);
+				opened = false;
+				tmp = "";
+				len = 0;
+			} else {
+				tmp[len] = EOS;
+				tkn = consoleGetTocken(tmp);
+				if (tkn != TokenInvalid) {
+					newLine = consolePushToken(tkn, newLine);
+				}
+				opened = false;
+				tmp = "";
+				len = 0;
+			}
+		} else if (tpl[i] == '%') {
+			newLine = consolePushString(tmp, newLine);
+			opened = true;
+			tmp = "";
+			len = 0;
+		} else {
+			tmp[len++] = tpl[i];
+		}
+	}
+
+	if (len > 0 && !opened && !(len == 1 && tmp[0] == EOS)) {
+		tmp[len] = EOS;
+		consolePushString(tmp, newLine);
+	}
+}
+
+TokenEnum:consoleGetTocken(const token[]) {
+	if (equal(token, "ID")) {
+		return TokenBanId;
+	}
+
+	if (equal(token, "PLAYER_NAME")) {
+		return TokenPlayerName;
+	}
+
+	if (equal(token, "PLAYER_IP")) {
+		return TokenPlayerIP;
+	}
+
+	if (equal(token, "PLAYER_STEAMID")) {
+		return TokenPlayerSteamID;
+	}
+
+	if (equal(token, "REASON")) {
+		return TokenReason;
+	}
+
+	if (equal(token, "CREATED")) {
+		return TokenCreated;
+	}
+
+	if (equal(token, "TIME")) {
+		return TokenTime;
+	}
+
+	if (equal(token, "LEFT")) {
+		return TokenLeft;
+	}
+
+	if (equal(token, "EXPIRED")) {
+		return TokenExpired;
+	}
+
+	return TokenInvalid;
+}
+
+bool:consolePushToken(const TokenEnum:token, bool:newLine) {
+	if (newLine && ArraySize(ConsoleTokens) > 0) {
+		arrayset(Token, 0, sizeof Token);
+		Token[TokenInfoID] = TokenNewLine;
+		ArrayPushArray(ConsoleTokens, Token, sizeof Token);
+		newLine = false;
+	}
+	arrayset(Token, 0, sizeof Token);
+	Token[TokenInfoID] = token;
+	ArrayPushArray(ConsoleTokens, Token, sizeof Token);
+
+	return newLine;
+}
+
+bool:consolePushString(const buffer[], bool:newLine) {
+	if (newLine && ArraySize(ConsoleTokens) > 0) {
+		arrayset(Token, 0, sizeof Token);
+		Token[TokenInfoID] = TokenNewLine;
+		ArrayPushArray(ConsoleTokens, Token, sizeof Token);
+		newLine = false;
+	}
+	new index = ArrayPushString(ConsoleStrings, buffer);
+	arrayset(Token, 0, sizeof Token);
+	Token[TokenInfoID] = TokenString;
+	Token[TokenInfoExtra] = index;
+	ArrayPushArray(ConsoleTokens, Token, sizeof Token);
+
+	return newLine;
+}
+
+consoleClear() {
+	if (ConsoleTokens != Invalid_Array) {
+		ArrayDestroy(ConsoleTokens);
+	}
+	if (ConsoleStrings != Invalid_Array) {
+		ArrayDestroy(ConsoleStrings);
+	}
+}
+
+consolePrint(const id) {
+	new buffer[192], len;
+	for (new i = 0, n = ArraySize(ConsoleTokens); i < n; i++ ) {
+		arrayset(Token, 0, sizeof Token);
+		ArrayGetArray(ConsoleTokens, i, Token, sizeof Token);
+		switch (Token[TokenInfoID]) {
+
+			case TokenPercent: {
+				len = add(buffer, charsmax(buffer) - 1, "%");
+			}
+
+			case TokenNewLine: {
+				buffer[len] = '^n';
+				buffer[len + 1] = EOS;
+				message_begin(MSG_ONE, SVC_PRINT, .player = id);
+				write_string(buffer);
+				message_end();
+				buffer = "";
+				len = 0;
+			}
+
+			case TokenString: {
+				len += ArrayGetString(ConsoleStrings, Token[TokenInfoExtra], buffer[len], charsmax(buffer) - len - 1);
+			}
+
+			case TokenBanId: {
+				len += formatex(buffer[len], charsmax(buffer) - len - 1, "%d", APS_GetId());
+			}
+
+			case TokenPlayerName: {
+				len += get_user_name(id,  buffer[len], charsmax(buffer) - len - 1);
+			}
+
+			case TokenPlayerIP: {
+				len += get_user_ip(id,  buffer[len], charsmax(buffer) - len, 1);
+			}
+
+			case TokenPlayerSteamID: {
+				len += get_user_authid(id,  buffer[len], charsmax(buffer) - len - 1);
+			}
+
+			case TokenReason: {
+				len += APS_GetReason(buffer[len], charsmax(buffer) - len - 1);
+			}
+
+			case TokenCreated : {}
+			case TokenTime : {}
+			case TokenLeft : {}
+
+			case TokenExpired: {
+				len += format_time(buffer[len], charsmax(buffer) - len - 1, "%d/%m/%Y %H:%M:%S", APS_GetExpired());
+			}
+		}
+	}
 }
