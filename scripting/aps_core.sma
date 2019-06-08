@@ -247,33 +247,33 @@ public plugin_natives() {
 	//register_native("APS_CheckPlayer", "NativeCheckPlayer", 0);
 }
 
-public NativeRegisterType(plugin, argc) {
+public APS_Type:NativeRegisterType(plugin, argc) {
 	enum { arg_type = 1 };
 
-	CHECK_NATIVE_ARGS_NUM(argc, 1, -1)
+	CHECK_NATIVE_ARGS_NUM(argc, 1, APS_InvalidType)
 
 	new type[APS_MAX_TYPE_LENGTH];
 	get_string(arg_type, type, charsmax(type));
-	return ArrayPushString(Types, type);
+	return APS_Type:ArrayPushString(Types, type);
 }
 
-public NativeGetTypeIndex(plugin, argc) {
+public APS_Type:NativeGetTypeIndex(plugin, argc) {
 	enum { arg_type = 1 };
 
-	CHECK_NATIVE_ARGS_NUM(argc, 1, -1)
+	CHECK_NATIVE_ARGS_NUM(argc, 1, APS_InvalidType)
 
 	new type[APS_MAX_TYPE_LENGTH];
 	get_string(arg_type, type, charsmax(type));
-	return ArrayFindString(Types, type);
+	return APS_Type:ArrayFindString(Types, type);
 }
 
 public NativeGetTypeName(plugin, argc) {
 	enum { arg_type = 1, arg_value, arg_len };
 
-	CHECK_NATIVE_ARGS_NUM(argc, 1, -1)
+	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
 
 	new typeIndex = get_param(arg_type);
-	CHECK_NATIVE_TYPE(typeIndex, -1)
+	CHECK_NATIVE_TYPE_ERROR(typeIndex, 0)
 	new type[APS_MAX_TYPE_LENGTH];
 	ArrayGetString(Types, typeIndex, type, charsmax(type));
 	return set_string(arg_value, type, get_param(arg_len));

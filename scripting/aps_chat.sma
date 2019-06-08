@@ -3,10 +3,12 @@
 #include <aps>
 #include <aps_chat>
 
+#define MAX_CMD_LENGTH 32
+
 enum _:CmdData {
 	CmdFlags,
 	CmdAccess,
-	CmdName[APS_MAX_CMD_LENGTH]
+	CmdName[MAX_CMD_LENGTH]
 };
 
 new const Commands[][CmdData] = {
@@ -16,14 +18,10 @@ new const Commands[][CmdData] = {
 };
 
 new Blocked[MAX_PLAYERS + 1];
-new TypeId;
+new APS_Type:TypeId;
 
 public plugin_init() {
 	register_plugin("[APS] Chat", "0.1.1", "GM-X Team");
-
-	if(!has_vtc()) {
-		RegisterHookChain(RG_CSGameRules_CanPlayerHearPlayer, "CSGameRules_CanPlayerHearPlayer_Pre", false);
-	}
 
 	for(new i; i < sizeof Commands; i++) {
 		register_concmd(Commands[i][CmdName], "CmdHandle", Commands[i][CmdAccess]);
@@ -42,36 +40,20 @@ public client_disconnected(id) {
 	Blocked[id] = 0;
 }
 
-public APS_PlayerPunished(const id, const type) {
+public APS_PlayerPunished(const id, const APS_Type:type) {
 	if(type != TypeId) {
 		return;
 	}
 
 	Blocked[id] = APS_GetExtra();
-	if (Blocked[id] & APS_Chat_Voice && has_vtc()) {
-		VTC_MuteClient(id);
-	}
 }
 
-public APS_PlayerExonerated(const id, const type) {
+public APS_PlayerExonerated(const id, const APS_Type:type) {
 	if(type != TypeId) {
 		return;
 	}
 
-	new bool:hasBlocketVoice = (Blocked[id] & APS_Chat_Voice) ? true : false;
 	Blocked[id] &= ~APS_GetExtra();
-	if (hasBlocketVoice && !(Blocked[id] & APS_Chat_Voice) && has_vtc()) {
-		VTC_UnmuteClient(id);
-	}
-}
-
-public CSGameRules_CanPlayerHearPlayer_Pre(const listener, const sender) {
-	if (Blocked[sender] & APS_Chat_Voice) {
-		SetHookChainReturn(ATYPE_INTEGER, 0);
-		return HC_SUPERCEDE;
-	}
-
-	return HC_CONTINUE;
 }
 
 public CmdHandle(const id, const access) {
@@ -82,10 +64,11 @@ public CmdHandle(const id, const access) {
 
 	enum { arg_cmd, arg_player, arg_time, arg_reason, arg_details };
 
-	new tmp[APS_MAX_INFO_BUFFER_LENGTH]; read_argv(arg_cmd, tmp, charsmax(tmp));
+	new tmp[32];
+	read_argv(arg_cmd, tmp, charsmax(tmp));
 	new command = getCommandByName(tmp);
 
-	if(command == CMD_NOT_FOUND) {
+	if(command == INVALID_HANDLE) {
 		console_print(id, "Command not found!");
 		return PLUGIN_HANDLED;
 	}
@@ -122,11 +105,13 @@ getCommandByName(const name[]) {
 		}
 	}
 
-	return CMD_NOT_FOUND;
+	return INVALID_HANDLE;
 }
 
 public plugin_natives() {
 	register_native("APS_ChatGetBlocketType", "NativeChatGetBlocketType", 0);
+	register_native("APS_ChatGetBlocketText", "NativeChatGetBlocketText", 0);
+	register_native("APS_ChatGetBlocketVoice", "NativeChatGetBlocketVoice", 0);
 }
 
 public NativeChatGetBlocketType(plugin, argc) {
@@ -138,4 +123,26 @@ public NativeChatGetBlocketType(plugin, argc) {
 	CHECK_NATIVE_PLAYER(player, 0)
 
 	return Blocked[player];
+}
+
+public NativeChatGetBlocketText(plugin, argc) {
+	enum { arg_player = 1 };
+
+	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
+
+	new player = get_param(arg_player);
+	CHECK_NATIVE_PLAYER(player, 0)
+
+	return Blocked[player] & APS_Chat_Text ? 1 : 0;
+}
+
+public NativeChatGetBlocketVoice(plugin, argc) {
+	enum { arg_player = 1 };
+
+	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
+
+	new player = get_param(arg_player);
+	CHECK_NATIVE_PLAYER(player, 0)
+
+	return Blocked[player] & APS_Chat_Voice ? 1 : 0;
 }

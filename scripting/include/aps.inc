@@ -11,21 +11,25 @@
 #define APS_MINOR_VERSION			1
 #define APS_MAINTENANCE_VERSION		1
 
+enum APS_Type {
+	APS_InvalidType = -1,
+};
+
 stock const APS_API_VERSION_STR[] = "0.1.0";
 
 forward APS_Initing();
 forward APP_Inited();
-forward APS_PlayerPunishing(const id, const type);
-forward APS_PlayerPunishing(const id, const type);
-forward APS_PlayerExonerating(const id, const type);
-forward APS_PlayerExonerated(const id, const type);
+forward APS_PlayerPunishing(const id, const APS_Type:type);
+forward APS_PlayerPunishing(const id, const APS_Type:type);
+forward APS_PlayerExonerating(const id, const APS_Type:type);
+forward APS_PlayerExonerated(const id, const APS_Type:type);
 forward APS_PlayerChecking(const id);
 forward APS_PlayerChecked(const id);
 
-native APS_RegisterType(const name[]);
-native APS_GetTypeIndex(const name[]);
-native APS_GetTypeName(const index, value[], len);
-native APS_PunishPlayer(const id, const type, const time, const reason[], const details[] = "", const punisherId = 0, const extra = 0);
+native APS_Type:APS_RegisterType(const name[]);
+native APS_Type:APS_GetTypeIndex(const name[]);
+native APS_GetTypeName(const APS_Type:index, value[], len);
+native APS_PunishPlayer(const id, const APS_Type:type, const time, const reason[], const details[] = "", const punisherId = 0, const extra = 0);
 native APS_GetId();
 native APS_GetExtra();
 native APS_SetExtra(const value);

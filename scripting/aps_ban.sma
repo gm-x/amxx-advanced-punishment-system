@@ -7,7 +7,7 @@ enum FWD {
 
 new Forwards[FWD], FwdReturn;
 
-new TypeId;
+new APS_Type:TypeId;
 
 public plugin_init() {
 	register_plugin("[APS] Ban", "0.1.0", "GM-X Team");
@@ -30,7 +30,7 @@ public APS_Initing() {
 	TypeId = APS_RegisterType("ban");
 }
 
-public APS_PlayerPunished(const id, const type) {
+public APS_PlayerPunished(const id, const APS_Type:type) {
 	if(type != TypeId) {
 		return;
 	}
