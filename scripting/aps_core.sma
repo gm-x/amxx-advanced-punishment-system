@@ -3,15 +3,14 @@
 #include <reapi>
 #include <grip>
 #include <gmx>
-#include <gmx_player>
 #include <aps>
 
 #define APS_VERSION \
 	fmt( \
 		"%d.%d.%d",    \
-		 APS_MAJOR_VERSION, \
-		 APS_MINOR_VERSION, \
-		 APS_MAINTENANCE_VERSION \
+		APS_MAJOR_VERSION, \
+		APS_MINOR_VERSION, \
+		APS_MAINTENANCE_VERSION \
 	)
 
 #define CHECK_NATIVE_TYPE(%1,%2) \
