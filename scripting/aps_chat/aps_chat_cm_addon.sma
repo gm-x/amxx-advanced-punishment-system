@@ -10,9 +10,9 @@ enum _:MessageReturn {
 forward cm_player_send_message(const id, const message[], const team_chat);
 
 public plugin_init() {
-	register_plugin("[APS] Chat Manager Addon", "0.1.0", "GM-X Team");
+	register_plugin("[APS] Chat CM Addon", "0.1.0", "GM-X Team");
 }
 
 public cm_player_send_message(const id) {
-    return APS_ChatGetBlocketType(id) & APS_Chat_Text ? MESSAGE_BLOCKED : MESSAGE_IGNORED;
+	return APS_ChatGetBlocketText(id) ? MESSAGE_BLOCKED : MESSAGE_IGNORED;
 }

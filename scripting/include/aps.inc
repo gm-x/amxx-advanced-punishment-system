@@ -11,21 +11,25 @@
 #define APS_MINOR_VERSION			1
 #define APS_MAINTENANCE_VERSION		1
 
+enum APS_Type {
+	APS_InvalidType = -1,
+};
+
 stock const APS_API_VERSION_STR[] = "0.1.0";
 
 forward APS_Initing();
 forward APP_Inited();
-forward APS_PlayerPunishing(const id, const type);
-forward APS_PlayerPunishing(const id, const type);
-forward APS_PlayerExonerating(const id, const type);
-forward APS_PlayerExonerated(const id, const type);
+forward APS_PlayerPunishing(const id, const APS_Type:type);
+forward APS_PlayerPunishing(const id, const APS_Type:type);
+forward APS_PlayerExonerating(const id, const APS_Type:type);
+forward APS_PlayerExonerated(const id, const APS_Type:type);
 forward APS_PlayerChecking(const id);
 forward APS_PlayerChecked(const id);
 
-native APS_RegisterType(const name[]);
-native APS_GetTypeIndex(const name[]);
-native APS_GetTypeName(const index, value[], len);
-native APS_PunishPlayer(const id, const type, const time, const reason[], const details[] = "", const punisherId = 0, const extra = 0);
+native APS_Type:APS_RegisterType(const name[]);
+native APS_Type:APS_GetTypeIndex(const name[]);
+native APS_GetTypeName(const APS_Type:index, value[], len);
+native APS_PunishPlayer(const id, const APS_Type:type, const time, const reason[], const details[] = "", const punisherId = 0, const extra = 0);
 native APS_GetId();
 native APS_GetExtra();
 native APS_SetExtra(const value);
@@ -38,30 +42,18 @@ native APS_SetReason(const value[]);
 native APS_GetDetails(value[], const len);
 native APS_SetDetails(const value[]);
 
-#define CHECK_NATIVE_ARGS_NUM(%1,%2,%3) \
-	if (%1 < %2) { \
-		log_error(AMX_ERR_NATIVE, "Invalid num of arguments %d. Expected %d", %1, %2); \
-		return %3; \
-	}
- 
-#define CHECK_NATIVE_PLAYER(%1,%2) \
-	if (!is_user_connected(%1)) { \
-		log_error(AMX_ERR_NATIVE, "Invalid player %d", %1); \
-		return %2; \
-	}
-
 /*
 * This is callback from APS Core that gives major/minor versions for verifying compatibility for APS versions.
 * Do not modify this!
 */
 public __aps_version_check(const majorVersion, const minorVersion) {
-    if(majorVersion != APS_MAJOR_VERSION) {
-        set_fail_state("Api major version mismatch; expected %d, real %d", APS_MAJOR_VERSION, majorVersion);
-        return;
-    }
+	if(majorVersion != APS_MAJOR_VERSION) {
+		set_fail_state("Api major version mismatch; expected %d, real %d", APS_MAJOR_VERSION, majorVersion);
+		return;
+	}
 
-    if(minorVersion < APS_MINOR_VERSION){
-        set_fail_state("Api minor version mismatch; expected at least %d, real %d", APS_MINOR_VERSION, minorVersion);
-        return;
-    }
+	if(minorVersion < APS_MINOR_VERSION){
+		set_fail_state("Api minor version mismatch; expected at least %d, real %d", APS_MINOR_VERSION, minorVersion);
+		return;
+	}
 }

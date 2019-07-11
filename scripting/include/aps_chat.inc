@@ -10,3 +10,5 @@ enum (<<=1) {
 }
 
 native APS_ChatGetBlocketType(const player);
+native bool:APS_ChatGetBlocketText(const player);
+native bool:APS_ChatGetBlocketVoice(const player);
