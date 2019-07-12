@@ -1,11 +1,17 @@
+#pragma semicolon 1
+
 #include <amxmodx>
 #include <reapi>
 #include <grip>
 #include <gmx>
 #include <aps_mixed>
 
-#define clear_item() arrayset(Item, 0 , sizeof Item)
+#define clear_type() arrayset(Type, 0 , sizeof Type)
 #define clear_reason() arrayset(Reason, 0 , sizeof Reason)
+#define get_type(%1) clear_type(); \
+	ArrayGetArray(Types, %1, Type, sizeof Type)
+#define get_reason(%1) clear_type(); \
+	ArrayGetArray(Reasons, %1, Reason, sizeof Reason)
 
 #define CHECK_NATIVE_ARGS_NUM(%1,%2,%3) \
 	if (%1 < %2) { \
@@ -13,7 +19,13 @@
 		return %3; \
 	}
 
-const MAX_ITEM_TITLE_LENGTH = 64;
+#define CHECK_NATIVE_PLAYER(%1,%2) \
+	if (!is_user_connected(%1)) { \
+		log_error(AMX_ERR_NATIVE, "Invalid player %d", %1); \
+		return %2; \
+	}
+
+const MAX_TYPE_TITLE_LENGTH = 64;
 const MAX_REASON_TITLE_LENGTH = 64;
 
 #define MENU_TAB "^t^t"
@@ -27,20 +39,20 @@ new TeamNames[][] = {
 	"SPEC"
 };
 
-enum _:ItemStruc {
-	ItemPluginID,
-	ItemFuncID,
-	bool:ItemReason,
-	bool:ItemTime,
-	ItemTitle[MAX_ITEM_TITLE_LENGTH]
+enum _:type_s {
+	TypePluginID,
+	TypeFuncID,
+	bool:TypeReason,
+	bool:TypeTime,
+	TypeTitle[MAX_TYPE_TITLE_LENGTH]
 };
 
-enum _:ReasonStruc {
+enum _:reason_s {
 	ReasonTime,
 	ReasonTitle[MAX_REASON_TITLE_LENGTH]
 };
 
-enum _:PlayerMenu {
+enum _:player_menus_s {
 	PlayerMenuName[MAX_NAME_LENGTH],
 	PlayerMenuTarget,
 	PlayerMenuTargetIndex,
@@ -54,10 +66,10 @@ enum _:PlayerMenu {
 	PlayerMenuIds[MAX_PLAYERS],
 };
 
-new Array:Items, ItemsNum, Item[ItemStruc];
-new Array:Reasons, ReasonsNum, Reason[ReasonStruc];
+new Array:Types, TypesNum, Type[type_s];
+new Array:Reasons, ReasonsNum, Reason[reason_s];
 new Array:Times, TimesNum;
-new PlayersMenu[MAX_PLAYERS + 1][PlayerMenu];
+new PlayersMenu[MAX_PLAYERS + 1][player_menus_s];
 
 public plugin_init() {
 	register_plugin("[APS] Players Menu", "0.1.0", "GM-X Team");
@@ -72,8 +84,8 @@ public plugin_init() {
 	register_menucmd(register_menuid("APS_TIMES_MENU"), 1023, "HandleTimesMenu");
 	register_menucmd(register_menuid("APS_CONFIRM_MENU"), 1023, "HandleConfirmMenu");
 
-	Items = ArrayCreate(ItemStruc, 0);
-	Reasons = ArrayCreate(ReasonStruc, 0);
+	Types = ArrayCreate(type_s, 0);
+	Reasons = ArrayCreate(reason_s, 0);
 	Times = ArrayCreate(1, 0);
 }
 
@@ -84,7 +96,7 @@ public plugin_cfg() {
 }
 
 public plugin_end() {
-	ArrayDestroy(Items);
+	ArrayDestroy(Types);
 	ArrayDestroy(Reasons);
 	ArrayDestroy(Times);
 }
@@ -213,8 +225,8 @@ showTypesMenu(const id, const page = 0) {
 	SetGlobalTransTarget(id);
 
 	new start, end;
-	PlayersMenu[id][PlayerMenuPage] = getMenuPage(page, ItemsNum, 8, start, end);
-	new pages = getMenuPagesNum(ItemsNum, 8);
+	PlayersMenu[id][PlayerMenuPage] = getMenuPage(page, TypesNum, 8, start, end);
+	new pages = getMenuPagesNum(TypesNum, 8);
 	new bool:firstPage = bool:(PlayersMenu[id][PlayerMenuPage] == 0);
 
 	new menu[MAX_MENU_LENGTH];
@@ -222,10 +234,9 @@ showTypesMenu(const id, const page = 0) {
 
 	new keys = MENU_KEY_0;
 	for (new i = start, item; i < end; i++) {
-		clear_item();
-		ArrayGetArray(Items, i, Item, sizeof Item);
+		get_type(i);
 		keys |= (1 << item);
-		len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \w%s^n", MENU_TAB, ++item, Item[ItemTitle]);
+		len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \w%s^n", MENU_TAB, ++item, Type[TypeTitle]);
 	}
 
 	new tmp[15];
@@ -260,8 +271,7 @@ showReasonsMenu(const id, const page = 0) {
 
 	new keys = MENU_KEY_0;
 	for (new i = start, item; i < end; i++) {
-		clear_reason();
-		ArrayGetArray(Reasons, i, Reason, sizeof Reason);
+		get_reason(i);
 		keys |= (1 << item);
 		len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \w%s^n", MENU_TAB, ++item, Reason[ReasonTitle]);
 	}
@@ -322,10 +332,16 @@ showConfirmMenu(const id) {
 
 	new menu[MAX_MENU_LENGTH];
 	new len = formatex(menu, charsmax(menu), "%s\r%l^n^n", MENU_TAB, "APS_MENU_CONFIRM_TITLE");
-	new keys = MENU_KEY_1 | MENU_KEY_2;
 
-	len += formatex(menu[len], charsmax(menu) - len, "%s\r[1] \w%l", MENU_TAB, "YES");
-	len += formatex(menu[len], charsmax(menu) - len, "%s\r[2] \w%l", MENU_TAB, "NO");
+	get_type(PlayersMenu[id][PlayerMenuType]);
+	len += formatex(menu[len], charsmax(menu) - len, "%s\y%l\w: \y%s^n", MENU_TAB, "APS_MENU_TYPE", Type[TypeTitle]);
+	if (PlayersMenu[id][PlayerMenuReason] >= 0) {
+		get_reason(PlayersMenu[id][PlayerMenuReason]);
+		len += formatex(menu[len], charsmax(menu) - len, "%s\y%l\w: \y%s^n", MENU_TAB, "APS_MENU_REASON", Reason[ReasonTitle]);
+	}
+
+	new keys = MENU_KEY_1 | MENU_KEY_2;
+	len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[1] \w%l^n%s\r[2] \w%l", MENU_TAB, "APS_MENU_YES", MENU_TAB, "APS_MENU_NO");
 
 	show_menu(id, keys, menu, -1, "APS_CONFIRM_MENU");
 }
@@ -391,9 +407,7 @@ public HandleReasonsMenu(const id, const key) {
 
 		default: {
 			PlayersMenu[id][PlayerMenuReason] = (PlayersMenu[id][PlayerMenuPage] * 8) + key;
-
-			clear_reason();
-			ArrayGetArray(Reasons, PlayersMenu[id][PlayerMenuReason], Reason, sizeof Reason);
+			get_reason(PlayersMenu[id][PlayerMenuReason]);
 			if (Reason[ReasonTime] >= 0) {
 				PlayersMenu[id][PlayerMenuReason] = Reason[ReasonTime];
 			}
@@ -434,12 +448,11 @@ public HandleConfirmMenu(const id, const key) {
 		return;
 	}
 
-	if (key == 0 && callfunc_begin_i(Item[ItemFuncID], Item[ItemPluginID]) == 1) {
+	if (key == 0 && callfunc_begin_i(Type[TypeFuncID], Type[TypePluginID]) == 1) {
 		callfunc_push_int(id);
 		callfunc_push_int(PlayersMenu[id][PlayerMenuTarget]);
 		if (PlayersMenu[id][PlayerMenuReason] >= 0) {
-			clear_reason();
-			ArrayGetArray(Reasons, PlayersMenu[id][PlayerMenuReason], Reason, sizeof Reason);
+			get_reason(PlayersMenu[id][PlayerMenuReason]);
 			callfunc_push_str(Reason[ReasonTitle]);
 		} else {
 			callfunc_push_str("");
@@ -450,7 +463,7 @@ public HandleConfirmMenu(const id, const key) {
 }
 
 makeAction(const id) {
-	ArrayGetArray(Items, PlayersMenu[id][PlayerMenuType], Item, sizeof Item);
+	get_type(PlayersMenu[id][PlayerMenuType]);
 	if (canShowReason(id)) {
 		showReasonsMenu(id);
 	} else if (canShowTime(id)) {
@@ -461,7 +474,7 @@ makeAction(const id) {
 }
 
 bool:canShowReason(const id) {
-	if (!Item[ItemReason] || ReasonsNum == 0) {
+	if (!Type[TypeReason] || ReasonsNum == 0) {
 		return false;
 	}
 
@@ -469,7 +482,7 @@ bool:canShowReason(const id) {
 }
 
 bool:canShowTime(const id) {
-	if (!Item[ItemTime]) {
+	if (!Type[TypeTime]) {
 		return false;
 	}
 
@@ -533,11 +546,11 @@ public NativePushItem(plugin, argc) {
 	CHECK_NATIVE_ARGS_NUM(argc, 2, 0)
 	enum { arg_title = 1, arg_func, arg_reason, arg_time };
 
-	clear_item();
+	clear_type();
 
-	Item[ItemPluginID] = plugin;
+	Type[TypePluginID] = plugin;
 
-	get_string(arg_title, Item[ItemTitle], charsmax(Item[ItemTitle]));
+	get_string(arg_title, Type[TypeTitle], charsmax(Type[TypeTitle]));
 
 	new func[64];
 	get_string(arg_func, func, charsmax(func));
@@ -546,25 +559,25 @@ public NativePushItem(plugin, argc) {
 		return 0;
 	}
 
-	Item[ItemFuncID] = get_func_id(func, plugin);
-	if (Item[ItemFuncID] == -1) {
+	Type[TypeFuncID] = get_func_id(func, plugin);
+	if (Type[TypeFuncID] == -1) {
 		log_error(AMX_ERR_NATIVE, "Could not find function %s", func);
 		return -1;
 	}
 
 	if (argc >= arg_reason) {
-		Item[ItemReason] = bool:get_param(arg_reason);
+		Type[TypeReason] = bool:get_param(arg_reason);
 	} else {
-		Item[ItemReason] = false;
+		Type[TypeReason] = false;
 	}
 
 	if (argc >= arg_time) {
-		Item[ItemTime] = bool:get_param(arg_time);
+		Type[TypeTime] = bool:get_param(arg_time);
 	} else {
-		Item[ItemTime] = false;
+		Type[TypeTime] = false;
 	}
 
-	ArrayPushArray(Items, Item, sizeof Item);
-	ItemsNum = ArraySize(Items);
+	ArrayPushArray(Types, Type, sizeof Type);
+	TypesNum = ArraySize(Types);
 	return 1;
 }
