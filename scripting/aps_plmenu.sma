@@ -17,6 +17,7 @@ const MAX_ITEM_TITLE_LENGTH = 64;
 const MAX_REASON_TITLE_LENGTH = 64;
 
 #define MENU_TAB "^t^t"
+#define DEBUG
 // #define HIDE_ME_IN_MENU
 
 new TeamNames[][] = {
@@ -69,6 +70,7 @@ public plugin_init() {
 	register_menucmd(register_menuid("APS_TYPES_MENU"), 1023, "HandleTypesMenu");
 	register_menucmd(register_menuid("APS_REASONS_MENU"), 1023, "HandleReasonsMenu");
 	register_menucmd(register_menuid("APS_TIMES_MENU"), 1023, "HandleTimesMenu");
+	register_menucmd(register_menuid("APS_CONFIRM_MENU"), 1023, "HandleConfirmMenu");
 
 	Items = ArrayCreate(ItemStruc, 0);
 	Reasons = ArrayCreate(ReasonStruc, 0);
@@ -194,9 +196,9 @@ showPlayersMenu(const id, const page = 0) {
 
 	if (end < PlayersMenu[id][PlayerMenuNum]) {
 		keys |= MENU_KEY_9;
-		len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[9] \w%L^n%s\r[0] \w%L", MENU_TAB, id, "MORE", MENU_TAB, id, (firstPage ? "EXIT" : "BACK"));
+		len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[9] \w%l^n%s\r[0] \w%l", MENU_TAB, "MORE", MENU_TAB, (firstPage ? "EXIT" : "BACK"));
 	} else {
-		len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%L", MENU_TAB, id, (firstPage ? "EXIT" : "BACK"));
+		len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%l", MENU_TAB, (firstPage ? "EXIT" : "BACK"));
 	}
 
 	show_menu(id, keys, menu, -1, "APS_PLAYERS_MENU");
@@ -208,13 +210,15 @@ showTypesMenu(const id, const page = 0) {
 		return;
 	}
 
+	SetGlobalTransTarget(id);
+
 	new start, end;
 	PlayersMenu[id][PlayerMenuPage] = getMenuPage(page, ItemsNum, 8, start, end);
 	new pages = getMenuPagesNum(ItemsNum, 8);
 	new bool:firstPage = bool:(PlayersMenu[id][PlayerMenuPage] == 0);
 
 	new menu[MAX_MENU_LENGTH];
-	new len = formatex(menu, charsmax(menu), "%s\r%l^t\d%d/%d^n^n", MENU_TAB, "STB_MENU_TITLE", PlayersMenu[id][PlayerMenuPage] + 1, pages + 1);
+	new len = formatex(menu, charsmax(menu), "%s\r%l^t\d%d/%d^n^n", MENU_TAB, "APS_MENU_PLAYERS_TITLE", PlayersMenu[id][PlayerMenuPage] + 1, pages + 1);
 
 	new keys = MENU_KEY_0;
 	for (new i = start, item; i < end; i++) {
@@ -230,9 +234,9 @@ showTypesMenu(const id, const page = 0) {
 
 	if (end < PlayersMenu[id][PlayerMenuNum]) {
 		keys |= MENU_KEY_9;
-		len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[9] \w%L^n%s\r[0] \w%L", MENU_TAB, id, "MORE", MENU_TAB, id, (firstPage ? "EXIT" : "BACK"));
+		len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[9] \w%l^n%s\r[0] \w%l", MENU_TAB, "MORE", MENU_TAB, (firstPage ? "EXIT" : "BACK"));
 	} else {
-		len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%L", MENU_TAB, id, (firstPage ? "EXIT" : "BACK"));
+		len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%l", MENU_TAB, (firstPage ? "EXIT" : "BACK"));
 	}
 
 	show_menu(id, keys, menu, -1, "APS_TYPES_MENU");
@@ -244,13 +248,15 @@ showReasonsMenu(const id, const page = 0) {
 		return;
 	}
 
+	SetGlobalTransTarget(id);
+
 	new start, end;
 	PlayersMenu[id][PlayerMenuPage] = getMenuPage(page, ReasonsNum, 8, start, end);
 	new pages = getMenuPagesNum(ReasonsNum, 8);
 	new bool:firstPage = bool:(PlayersMenu[id][PlayerMenuPage] == 0);
 
 	new menu[MAX_MENU_LENGTH];
-	new len = formatex(menu, charsmax(menu), "%s\r%l^t\d%d/%d^n^n", MENU_TAB, "STB_MENU_TITLE", PlayersMenu[id][PlayerMenuPage] + 1, pages + 1);
+	new len = formatex(menu, charsmax(menu), "%s\r%l^t\d%d/%d^n^n", MENU_TAB, "APS_MENU_REASONS_TITLE", PlayersMenu[id][PlayerMenuPage] + 1, pages + 1);
 
 	new keys = MENU_KEY_0;
 	for (new i = start, item; i < end; i++) {
@@ -264,11 +270,11 @@ showReasonsMenu(const id, const page = 0) {
 	setc(tmp, 8 - (end - start), '^n');
 	len += copy(menu[len], charsmax(menu) - len, tmp);
 
-	if (end < PlayersMenu[id][PlayerMenuNum]) {
+	if (end < ReasonsNum) {
 		keys |= MENU_KEY_9;
-		len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[9] \w%L^n%s\r[0] \w%L", MENU_TAB, id, "MORE", MENU_TAB, id, (firstPage ? "EXIT" : "BACK"));
+		len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[9] \w%l^n%s\r[0] \w%l", MENU_TAB, "MORE", MENU_TAB, (firstPage ? "EXIT" : "BACK"));
 	} else {
-		len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%L", MENU_TAB, id, (firstPage ? "EXIT" : "BACK"));
+		len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%l", MENU_TAB, (firstPage ? "EXIT" : "BACK"));
 	}
 
 	show_menu(id, keys, menu, -1, "APS_REASONS_MENU");
@@ -280,13 +286,15 @@ showTimesMenu(const id, const page = 0) {
 		return;
 	}
 
+	SetGlobalTransTarget(id);
+
 	new start, end;
 	PlayersMenu[id][PlayerMenuPage] = getMenuPage(page, TimesNum, 8, start, end);
 	new pages = getMenuPagesNum(TimesNum, 8);
 	new bool:firstPage = bool:(PlayersMenu[id][PlayerMenuPage] == 0);
 
 	new menu[MAX_MENU_LENGTH];
-	new len = formatex(menu, charsmax(menu), "%s\r%l^t\d%d/%d^n^n", MENU_TAB, "STB_MENU_TITLE", PlayersMenu[id][PlayerMenuPage] + 1, pages + 1);
+	new len = formatex(menu, charsmax(menu), "%s\r%l^t\d%d/%d^n^n", MENU_TAB, "APS_MENU_TIMES_TITLE", PlayersMenu[id][PlayerMenuPage] + 1, pages + 1);
 
 	new keys = MENU_KEY_0;
 	for (new i = start, item, time; i < end; i++) {
@@ -299,14 +307,27 @@ showTimesMenu(const id, const page = 0) {
 	setc(tmp, 8 - (end - start), '^n');
 	len += copy(menu[len], charsmax(menu) - len, tmp);
 
-	if (end < PlayersMenu[id][PlayerMenuNum]) {
+	if (end < TimesNum) {
 		keys |= MENU_KEY_9;
-		len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[9] \w%L^n%s\r[0] \w%L", MENU_TAB, id, "MORE", MENU_TAB, id, (firstPage ? "EXIT" : "BACK"));
+		len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[9] \w%l^n%s\r[0] \w%l", MENU_TAB, "MORE", MENU_TAB, (firstPage ? "EXIT" : "BACK"));
 	} else {
-		len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%L", MENU_TAB, id, (firstPage ? "EXIT" : "BACK"));
+		len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%l", MENU_TAB, (firstPage ? "EXIT" : "BACK"));
 	}
 
 	show_menu(id, keys, menu, -1, "APS_TIMES_MENU");
+}
+
+showConfirmMenu(const id) {
+	SetGlobalTransTarget(id);
+
+	new menu[MAX_MENU_LENGTH];
+	new len = formatex(menu, charsmax(menu), "%s\r%l^n^n", MENU_TAB, "APS_MENU_CONFIRM_TITLE");
+	new keys = MENU_KEY_1 | MENU_KEY_2;
+
+	len += formatex(menu[len], charsmax(menu) - len, "%s\r[1] \w%l", MENU_TAB, "YES");
+	len += formatex(menu[len], charsmax(menu) - len, "%s\r[2] \w%l", MENU_TAB, "NO");
+
+	show_menu(id, keys, menu, -1, "APS_CONFIRM_MENU");
 }
 
 public HandlePlayersMenu(const id, const key) {
@@ -403,13 +424,17 @@ public HandleTimesMenu(const id, const key) {
 	}
 }
 
-makeAction(const id) {
-	ArrayGetArray(Items, PlayersMenu[id][PlayerMenuType], Item, sizeof Item);
-	if (canShowReason(id)) {
-		showReasonsMenu(id);
-	} else if (canShowTime(id)) {
-		showTimesMenu(id);
-	} else if (callfunc_begin_i(Item[ItemFuncID], Item[ItemPluginID]) == 1) {
+public HandleConfirmMenu(const id, const key) {
+	if (!isTargetValid(id)) {
+		displayMenu(id);
+		return;
+	}
+
+	if (key != 0) {
+		return;
+	}
+
+	if (key == 0 && callfunc_begin_i(Item[ItemFuncID], Item[ItemPluginID]) == 1) {
 		callfunc_push_int(id);
 		callfunc_push_int(PlayersMenu[id][PlayerMenuTarget]);
 		if (PlayersMenu[id][PlayerMenuReason] >= 0) {
@@ -421,6 +446,17 @@ makeAction(const id) {
 		}
 		callfunc_push_int(PlayersMenu[id][PlayerMenuTime]);
 		callfunc_end();
+	}
+}
+
+makeAction(const id) {
+	ArrayGetArray(Items, PlayersMenu[id][PlayerMenuType], Item, sizeof Item);
+	if (canShowReason(id)) {
+		showReasonsMenu(id);
+	} else if (canShowTime(id)) {
+		showTimesMenu(id);
+	} else {
+		showConfirmMenu(id);
 	}
 }
 
