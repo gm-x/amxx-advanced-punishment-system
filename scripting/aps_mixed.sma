@@ -17,11 +17,11 @@ enum FWD {
 
 new Forwards[FWD], FwdReturn;
 
-new Damage[MAX_DAMAGE_NUM] = {
+new Damage[] = {
 	0, 5, 10, 15, 20
 };
 
-new DamageNum = 5;
+new DamageNum = sizeof Damage;
 new Players[MAX_PLAYERS + 1];
 
 public plugin_init() {
