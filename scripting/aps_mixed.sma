@@ -1,5 +1,6 @@
 #include <amxmodx>
 #include <aps>
+#include <aps_plmenu>
 
 enum FWD {
 	FWD_PlayerKick,
@@ -23,6 +24,8 @@ public plugin_init() {
 	register_concmd("amx_slap", "CmdSlap", ADMIN_SLAY);
 	register_concmd("amx_slay", "CmdSlay", ADMIN_SLAY);
 
+	register_menucmd(register_menuid("APS_MIXED_SLAP_MENU"), 1023, "HandleSlapMenu");
+
 	Forwards[FWD_PlayerKick] = CreateMultiForward("APS_PlayerKick", ET_STOP, FP_CELL, FP_CELL, FP_STRING);
 	Forwards[FWD_PlayerKicked] = CreateMultiForward("APS_PlayerKicked", ET_IGNORE, FP_CELL, FP_CELL, FP_STRING);
 	Forwards[FWD_PlayerSlap] = CreateMultiForward("APS_PlayerSlap", ET_STOP, FP_CELL, FP_CELL, FP_CELL);
@@ -38,6 +41,19 @@ public plugin_end() {
 	DestroyForward(Forwards[FWD_PlayerSlaped]);
 	DestroyForward(Forwards[FWD_PlayerSlay]);
 	DestroyForward(Forwards[FWD_PlayerSlayed]);
+}
+
+public APS_Inited() {
+	APS_PlMenu_PushType("Kick", "HandlePlMenuKickAction", true, false, true);
+	APS_PlMenu_PushType("Slap/Slay", "HandlePlMenuSlapAction", false, false, true);
+}
+
+public HandlePlMenuKickAction(const admin, const player, const reason[]) {
+	playerKick(admin, player, reason);
+}
+
+public HandlePlMenuSlapAction(const admin, const player) {
+
 }
 
 public CmdKick(const id, const level) {

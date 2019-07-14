@@ -10,20 +10,8 @@
 #define clear_reason() arrayset(Reason, 0 , sizeof Reason)
 #define get_type(%1) clear_type(); \
 	ArrayGetArray(Types, %1, Type, sizeof Type)
-#define get_reason(%1) clear_type(); \
+#define get_reason(%1) clear_reason(); \
 	ArrayGetArray(Reasons, %1, Reason, sizeof Reason)
-
-#define CHECK_NATIVE_ARGS_NUM(%1,%2,%3) \
-	if (%1 < %2) { \
-		log_error(AMX_ERR_NATIVE, "Invalid num of arguments %d. Expected %d", %1, %2); \
-		return %3; \
-	}
-
-#define CHECK_NATIVE_PLAYER(%1,%2) \
-	if (!is_user_connected(%1)) { \
-		log_error(AMX_ERR_NATIVE, "Invalid player %d", %1); \
-		return %2; \
-	}
 
 const MAX_TYPE_TITLE_LENGTH = 64;
 const MAX_REASON_TITLE_LENGTH = 64;
@@ -43,6 +31,7 @@ enum _:type_s {
 	TypeHandler,
 	bool:TypeReason,
 	bool:TypeTime,
+	bool:TypeConfirm,
 	TypeTitle[MAX_TYPE_TITLE_LENGTH]
 };
 
@@ -74,6 +63,7 @@ new PlayersMenu[MAX_PLAYERS + 1][player_menus_s];
 public plugin_init() {
 	register_plugin("[APS] Players Menu", "0.1.0", "GM-X Team");
 
+	register_dictionary("aps_plmenu.txt");
 	register_dictionary("common.txt");
 
 	RegisterHookChain(RG_CBasePlayer_SetClientUserInfoName, "CBasePlayer_SetClientUserInfoName_Post", true);
@@ -148,16 +138,16 @@ public CmdPlayersMenu(const id) {
 	return PLUGIN_HANDLED;
 }
 
-public APS_PlMenu_PushType_Handler(const title[], const handler, const bool:reason, const bool:time) {
+public APS_PlMenu_PushType_Handler(const title[], const handler, const bool:reason, const bool:time, const bool:confirm) {
 	clear_type();
 
 	copy(Type[TypeTitle], charsmax(Type[TypeTitle]), title);
 	Type[TypeHandler] = handler;
 	Type[TypeReason] = reason;
 	Type[TypeTime] = time;
+	Type[TypeConfirm] = confirm;
 	new ret = ArrayPushArray(Types, Type, sizeof Type);
 	TypesNum = ArraySize(Types);
-
 	return ret;
 }
 
@@ -182,7 +172,7 @@ showPlayersMenu(const id, const page = 0) {
 	new bool:firstPage = bool:(PlayersMenu[id][PlayerMenuPage] == 0);
 
 	new menu[MAX_MENU_LENGTH];
-	new len = formatex(menu, charsmax(menu), "%s\r%l^t\d%d/%d^n^n", MENU_TAB, "APS_PLMENU_TITLE", PlayersMenu[id][PlayerMenuPage] + 1, pages + 1);
+	new len = formatex(menu, charsmax(menu), "%s\r%l^t\d%d/%d^n^n", MENU_TAB, "APS_MENU_PLAYERS_TITLE", PlayersMenu[id][PlayerMenuPage] + 1, pages + 1);
 
 	new keys = MENU_KEY_0;
 	for (new i = start, player, team, item; i < end; i++) {
@@ -245,7 +235,7 @@ showTypesMenu(const id, const page = 0) {
 	new bool:firstPage = bool:(PlayersMenu[id][PlayerMenuPage] == 0);
 
 	new menu[MAX_MENU_LENGTH];
-	new len = formatex(menu, charsmax(menu), "%s\r%l^t\d%d/%d^n^n", MENU_TAB, "APS_MENU_PLAYERS_TITLE", PlayersMenu[id][PlayerMenuPage] + 1, pages + 1);
+	new len = formatex(menu, charsmax(menu), "%s\r%l^t\d%d/%d^n^n", MENU_TAB, "APS_MENU_TYPES_TITLE", PlayersMenu[id][PlayerMenuPage] + 1, pages + 1);
 
 	new keys = MENU_KEY_0;
 	for (new i = start, item; i < end; i++) {
@@ -459,32 +449,28 @@ public HandleConfirmMenu(const id, const key) {
 		return;
 	}
 
-	if (key != 0) {
-		return;
-	}
-
-	if (key == 0) {
-		new reason[MAX_REASON_TITLE_LENGTH];
-		if (PlayersMenu[id][PlayerMenuReason] >= 0) {
-			get_reason(PlayersMenu[id][PlayerMenuReason]);
-			copy(reason, charsmax(reason), Reason[ReasonTitle]);
-		}
-		get_type(PlayersMenu[id][PlayerMenuType]);
-		new time = PlayersMenu[id][PlayerMenuTime] != -1 ? ArrayGetCell(Times, PlayersMenu[id][PlayerMenuTime]) : 0;
-		ExecuteForward(Type[TypeHandler], FwReturn, id, PlayersMenu[id][PlayerMenuTarget], reason, time);
-	}
+	makeAction(id, bool:(key == 0));
 }
 
-makeAction(const id) {
+makeAction(const id, const bool:confirm = false) {
 	get_type(PlayersMenu[id][PlayerMenuType]);
 	if (canShowReason(id)) {
 		showReasonsMenu(id);
 	} else if (canShowTime(id)) {
 		showTimesMenu(id);
-	} else {
+	} else if (!confirm && canShowConfirm()) {
 		showConfirmMenu(id);
+	} else {
+		new reason[MAX_REASON_TITLE_LENGTH];
+		if (PlayersMenu[id][PlayerMenuReason] >= 0) {
+			get_reason(PlayersMenu[id][PlayerMenuReason]);
+			copy(reason, charsmax(reason), Reason[ReasonTitle]);
+		}
+		new time = PlayersMenu[id][PlayerMenuTime] != -1 ? ArrayGetCell(Times, PlayersMenu[id][PlayerMenuTime]) : 0;
+		ExecuteForward(Type[TypeHandler], FwReturn, id, PlayersMenu[id][PlayerMenuTarget], reason, time);
 	}
 }
+
 
 bool:canShowReason(const id) {
 	if (!Type[TypeReason] || ReasonsNum == 0) {
@@ -500,6 +486,10 @@ bool:canShowTime(const id) {
 	}
 
 	return bool:(PlayersMenu[id][PlayerMenuTime] == -1);
+}
+
+bool:canShowConfirm() {
+	return Type[TypeConfirm];
 }
 
 findPlayersForMenu(const id, const TeamName:team) {
@@ -549,48 +539,3 @@ getMenuPage(cur_page, elements_num, per_page, &start, &end) {
 getMenuPagesNum(elements_num, per_page) {
 	return (elements_num - 1) / per_page;
 }
-
-// NATIVES
-// public plugin_natives() {
-	// register_native("APS_PlMenu_PushItem", "NativePushItem", 0);
-// }
-
-// public NativePushItem(plugin, argc) {
-// 	CHECK_NATIVE_ARGS_NUM(argc, 2, 0)
-// 	enum { arg_title = 1, arg_func, arg_reason, arg_time };
-
-// 	clear_type();
-
-// 	Type[TypePluginID] = plugin;
-
-// 	get_string(arg_title, Type[TypeTitle], charsmax(Type[TypeTitle]));
-
-// 	new func[64];
-// 	get_string(arg_func, func, charsmax(func));
-// 	if (func[0] == EOS) {
-// 		log_error(AMX_ERR_NATIVE, "Could not find function %s", func);
-// 		return 0;
-// 	}
-
-// 	Type[TypeFuncID] = get_func_id(func, plugin);
-// 	if (Type[TypeFuncID] == -1) {
-// 		log_error(AMX_ERR_NATIVE, "Could not find function %s", func);
-// 		return -1;
-// 	}
-
-// 	if (argc >= arg_reason) {
-// 		Type[TypeReason] = bool:get_param(arg_reason);
-// 	} else {
-// 		Type[TypeReason] = false;
-// 	}
-
-// 	if (argc >= arg_time) {
-// 		Type[TypeTime] = bool:get_param(arg_time);
-// 	} else {
-// 		Type[TypeTime] = false;
-// 	}
-
-// 	ArrayPushArray(Types, Type, sizeof Type);
-// 	TypesNum = ArraySize(Types);
-// 	return 1;
-// }

@@ -3,9 +3,7 @@
 #endif
 #define _aps_plmenu_included
 
-// native APS_PlMenu_PushItem(const title[], const func[], const bool:reason, const bool:time);
-
-stock APS_PlMenu_PushType(const title[], const handler[], const bool:reason = false, const time = false) {
+stock APS_PlMenu_PushType(const title[], const handler[], const bool:reason = false, const time = false, const confirm = false) {
     new pluginID = get_plugin(-1);
     new fwd = CreateOneForward(pluginID, handler, FP_CELL, FP_CELL, FP_STRING, FP_CELL);
 
@@ -28,6 +26,7 @@ stock APS_PlMenu_PushType(const title[], const handler[], const bool:reason = fa
 			callfunc_push_int(fwd);
 			callfunc_push_int(_:reason);
 			callfunc_push_int(_:time);
+			callfunc_push_int(_:confirm);
 			callfunc_end();
 		}
     }

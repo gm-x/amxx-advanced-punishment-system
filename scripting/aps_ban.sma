@@ -2,18 +2,6 @@
 #include <aps>
 #include <aps_plmenu>
 
-#define CHECK_NATIVE_ARGS_NUM(%1,%2,%3) \
-	if (%1 < %2) { \
-		log_error(AMX_ERR_NATIVE, "Invalid num of arguments %d. Expected %d", %1, %2); \
-		return %3; \
-	}
-
-#define CHECK_NATIVE_PLAYER(%1,%2) \
-    if (!is_user_connected(%1)) { \
-        log_error(AMX_ERR_NATIVE, "Invalid player %d", %1); \
-        return %2; \
-    }
-
 enum FWD {
 	FWD_PlayerBanKick,
 }
@@ -39,12 +27,14 @@ public plugin_end() {
 
 public APS_Initing() {
 	TypeId = APS_RegisterType("ban");
-	APS_PlMenu_PushType("BAN", "HandlePlMenuAction", true, true);
+}
+
+public APS_Inited() {
+	APS_PlMenu_PushType("BAN", "HandlePlMenuAction", true, true, true);
 }
 
 public HandlePlMenuAction(const admin, const player, const reason[], const time) {
-	server_print("^t BAN %d %d '%s' %d", admin, player, reason, time);
-	// APS_PunishPlayer(player, TypeId, time, reason, "", admin);
+	APS_PunishPlayer(player, TypeId, time, reason, "", admin);
 }
 
 public APS_PlayerPunished(const id, const APS_Type:type) {
@@ -334,29 +324,4 @@ consolePrint(const id) {
 			}
 		}
 	}
-}
-
-// NATIVES
-public plugin_natives() {
-	register_native("APS_Ban", "NativeBan", 0);
-}
-
-public NativeBan(plugin, argc) {
-	CHECK_NATIVE_ARGS_NUM(argc, 4, 0)
-	enum { arg_admin = 1, arg_player, arg_time, arg_reason, arg_details };
-
-	new admin = get_param(arg_admin);
-	CHECK_NATIVE_PLAYER(admin, 0)
-
-	new player = get_param(arg_player);
-	CHECK_NATIVE_PLAYER(player, 0)
-
-	new time = get_param(arg_time);
-
-	new reason[APS_MAX_REASON_LENGTH], details[APS_MAX_DETAILS_LENGTH];
-	get_string(arg_reason, reason, charsmax(reason));
-	get_string(arg_details, details, charsmax(details));
-
-	APS_PunishPlayer(player, TypeId, time, reason, details, admin);	
-	return 1;
 }
