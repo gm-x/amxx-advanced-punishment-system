@@ -1,0 +1,13 @@
+[en]
+APS_TYPE_KICK=Kick
+APS_TYPE_SLAP_SLAY=Slap/Slay
+APS_MENU_SLAP_SLAY_TITLE=Slap/Slay
+APS_MENU_ITEM_SLAP=Slap with \y%d \wdamage
+APS_MENU_ITEM_SLAY=Slay
+
+[ru]
+APS_TYPE_KICK=Кикнуть
+APS_TYPE_SLAP_SLAY=Стукнуть/Убить
+APS_MENU_SLAP_SLAY_TITLE=Стукнуть/Убить
+APS_MENU_ITEM_SLAP=Стукнуть с \y%d \wурона
+APS_MENU_ITEM_SLAY=Убить

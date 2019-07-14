@@ -2,6 +2,10 @@
 #include <aps>
 #include <aps_plmenu>
 
+#define MENU_TAB "^t^t"
+
+const MAX_DAMAGE_NUM = 7;
+
 enum FWD {
 	FWD_PlayerKick,
 	FWD_PlayerKicked,
@@ -13,8 +17,16 @@ enum FWD {
 
 new Forwards[FWD], FwdReturn;
 
+new Damage[MAX_DAMAGE_NUM] = {
+	0, 5, 10, 15, 20
+};
+
+new DamageNum = 5;
+new Players[MAX_PLAYERS + 1];
+
 public plugin_init() {
 	register_plugin("[APS] Mixed", "0.1.0", "GM-X Team");
+	register_dictionary("aps_mixed.txt");
 
 	// register_dictionary("admincmd.txt");
 	// register_dictionary("common.txt");
@@ -24,7 +36,7 @@ public plugin_init() {
 	register_concmd("amx_slap", "CmdSlap", ADMIN_SLAY);
 	register_concmd("amx_slay", "CmdSlay", ADMIN_SLAY);
 
-	register_menucmd(register_menuid("APS_MIXED_SLAP_MENU"), 1023, "HandleSlapMenu");
+	register_menucmd(register_menuid("APS_SLAP_SLAY_MENU"), 1023, "HandleSlapSlayMenu");
 
 	Forwards[FWD_PlayerKick] = CreateMultiForward("APS_PlayerKick", ET_STOP, FP_CELL, FP_CELL, FP_STRING);
 	Forwards[FWD_PlayerKicked] = CreateMultiForward("APS_PlayerKicked", ET_IGNORE, FP_CELL, FP_CELL, FP_STRING);
@@ -44,8 +56,8 @@ public plugin_end() {
 }
 
 public APS_Inited() {
-	APS_PlMenu_PushType("Kick", "HandlePlMenuKickAction", true, false, true);
-	APS_PlMenu_PushType("Slap/Slay", "HandlePlMenuSlapAction", false, false, true);
+	APS_PlMenu_PushType("APS_TYPE_KICK", "HandlePlMenuKickAction", true, false, true);
+	APS_PlMenu_PushType("APS_TYPE_SLAP_SLAY", "HandlePlMenuSlapAction", false, false, false);
 }
 
 public HandlePlMenuKickAction(const admin, const player, const reason[]) {
@@ -53,7 +65,41 @@ public HandlePlMenuKickAction(const admin, const player, const reason[]) {
 }
 
 public HandlePlMenuSlapAction(const admin, const player) {
+	Players[admin] = player;
+	showSlapSlayMenu(admin);
+}
 
+showSlapSlayMenu(const id) {
+	SetGlobalTransTarget(id);
+
+	new menu[MAX_MENU_LENGTH];
+	new len = formatex(menu, charsmax(menu), "%s\r%l^n^n", MENU_TAB, "APS_MENU_SLAP_SLAY_TITLE");
+
+	new keys = MENU_KEY_0 | MENU_KEY_8;
+
+	for (new i = 0, item; i < DamageNum; i++) {
+		keys |= (1 << item);
+		len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \w%l^n", MENU_TAB, ++item, "APS_MENU_ITEM_SLAP", Damage[i]);
+	}
+
+	len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[8] \w%l", MENU_TAB, "APS_MENU_ITEM_SLAY");
+
+	len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%l", MENU_TAB, "EXIT");
+
+	show_menu(id, keys, menu, -1, "APS_SLAP_SLAY_MENU");
+}
+
+public HandleSlapSlayMenu(id, key) {
+	switch (key) {
+		case 9: {}
+		case 7: {
+			playerSlay(id, Players[id])
+		}
+		default: {
+			playerSlap(id, Players[id], Damage[key]);
+			showSlapSlayMenu(id);
+		}
+	}
 }
 
 public CmdKick(const id, const level) {
@@ -152,6 +198,41 @@ public CmdSlay(const id, const level) {
 	return PLUGIN_HANDLED;
 }
 
+bool:playerKick(const admin, const player, const reason[]) {
+	ExecuteForward(Forwards[FWD_PlayerKick], FwdReturn, admin, player, reason);
+	if (FwdReturn == PLUGIN_HANDLED) {
+		return false;
+	}
+	new userid = get_user_userid(player);
+	if (!is_user_bot(player) && reason[0] != EOS) {
+		server_cmd("kick #%d ^"%s^"", userid, reason);
+	} else {
+		server_cmd("kick #%d", userid);
+	}
+	ExecuteForward(Forwards[FWD_PlayerKicked], FwdReturn, admin, player, reason);
+	return true;
+}
+
+bool:playerSlap(const admin, const player, const damage) {
+	ExecuteForward(Forwards[FWD_PlayerSlap], FwdReturn, admin, player, damage);
+	if (FwdReturn == PLUGIN_HANDLED) {
+		return false;
+	}
+	user_slap(player, damage);
+	ExecuteForward(Forwards[FWD_PlayerSlaped], FwdReturn, admin, player, damage);
+	return true;
+}
+
+bool:playerSlay(const admin, const player) {
+	ExecuteForward(Forwards[FWD_PlayerSlay], FwdReturn, admin, player);
+	if (FwdReturn == PLUGIN_HANDLED) {
+		return false;
+	}
+	user_kill(player);
+	ExecuteForward(Forwards[FWD_PlayerSlayed], FwdReturn, admin, player);
+	return true;
+}
+
 public plugin_natives() {
 	register_native("APS_PlayerKick", "NativeKick", 0);
 	register_native("APS_PlayerSlap", "NativeSlap", 0);
@@ -208,39 +289,4 @@ public NativeSlay(plugin, argc) {
 	CHECK_NATIVE_PLAYER(player, 0)
 
 	return playerSlay(admin, player) ? 1 : 0;
-}
-
-bool:playerKick(const admin, const player, const reason[]) {
-	ExecuteForward(Forwards[FWD_PlayerKick], FwdReturn, admin, player, reason);
-	if (FwdReturn == PLUGIN_HANDLED) {
-		return false;
-	}
-	new userid = get_user_userid(player);
-	if (!is_user_bot(player) && reason[0] != EOS) {
-		server_cmd("kick #%d ^"%s^"", userid, reason);
-	} else {
-		server_cmd("kick #%d", userid);
-	}
-	ExecuteForward(Forwards[FWD_PlayerKicked], FwdReturn, admin, player, reason);
-	return true;
-}
-
-bool:playerSlap(const admin, const player, const damage) {
-	ExecuteForward(Forwards[FWD_PlayerSlap], FwdReturn, admin, player, damage);
-	if (FwdReturn == PLUGIN_HANDLED) {
-		return false;
-	}
-	user_slap(player, damage);
-	ExecuteForward(Forwards[FWD_PlayerSlaped], FwdReturn, admin, player, damage);
-	return true;
-}
-
-bool:playerSlay(const admin, const player) {
-	ExecuteForward(Forwards[FWD_PlayerSlay], FwdReturn, admin, player);
-	if (FwdReturn == PLUGIN_HANDLED) {
-		return false;
-	}
-	user_kill(player);
-	ExecuteForward(Forwards[FWD_PlayerSlayed], FwdReturn, admin, player);
-	return true;
 }

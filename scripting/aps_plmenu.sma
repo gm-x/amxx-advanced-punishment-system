@@ -241,7 +241,7 @@ showTypesMenu(const id, const page = 0) {
 	for (new i = start, item; i < end; i++) {
 		get_type(i);
 		keys |= (1 << item);
-		len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \w%s^n", MENU_TAB, ++item, Type[TypeTitle]);
+		len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \w%l^n", MENU_TAB, ++item, Type[TypeTitle]);
 	}
 
 	new tmp[15];
@@ -460,7 +460,7 @@ makeAction(const id, const bool:confirm = false) {
 		showTimesMenu(id);
 	} else if (!confirm && canShowConfirm()) {
 		showConfirmMenu(id);
-	} else {
+	} else if (Type[TypeHandler] > 0) {
 		new reason[MAX_REASON_TITLE_LENGTH];
 		if (PlayersMenu[id][PlayerMenuReason] >= 0) {
 			get_reason(PlayersMenu[id][PlayerMenuReason]);

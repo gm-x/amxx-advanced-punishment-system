@@ -1,0 +1,5 @@
+[en]
+APS_TYPE_BAN=Ban
+
+[ru]
+APS_TYPE_BAN=Забанить

@@ -12,6 +12,7 @@ new APS_Type:TypeId;
 
 public plugin_init() {
 	register_plugin("[APS] Ban", "0.1.0", "GM-X Team");
+	register_dictionary("aps_ban.txt");
 	register_concmd("aps_ban", "CmdBan", ADMIN_BAN);
 	Forwards[FWD_PlayerBanKick] = CreateMultiForward("APS_PlayerBanKick", ET_STOP, FP_CELL);
 }
@@ -30,7 +31,7 @@ public APS_Initing() {
 }
 
 public APS_Inited() {
-	APS_PlMenu_PushType("BAN", "HandlePlMenuAction", true, true, true);
+	APS_PlMenu_PushType("APS_TYPE_BAN", "HandlePlMenuAction", true, true, true);
 }
 
 public HandlePlMenuAction(const admin, const player, const reason[], const time) {
