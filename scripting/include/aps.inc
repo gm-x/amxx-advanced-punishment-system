@@ -41,7 +41,10 @@ native APS_GetReason(value[], const len);
 native APS_SetReason(const value[]);
 native APS_GetDetails(value[], const len);
 native APS_SetDetails(const value[]);
-
+native APS_PunisherType:APS_GetPunisherType();
+native APS_SetPunisherType(const APS_PunisherType:value);
+native APS_GetPunisherId();
+native APS_SetPunisherId(const value);
 /*
 * This is callback from APS Core that gives major/minor versions for verifying compatibility for APS versions.
 * Do not modify this!

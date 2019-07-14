@@ -1,4 +1,5 @@
 #include <amxmodx>
+#include <gmx>
 #include <aps>
 // #include <aps_ban>
 // #include <aps_chat>
@@ -50,11 +51,12 @@ public APS_Inited() {
 	BanTypeID = APS_GetTypeIndex("ban");
 }
 
-public APS_PlayerPunished(const id, const APS_Type:type) {
+public APS_PlayerPunished(const player, const APS_Type:type) {
 	if (type == BanTypeID) {
-		log_amx("Ban: %N ban %N (time %d mins.) (reason ^"%s^") (details ^"%s^")", admin, id, time, reason, details);
+		// log_amx("Ban: %N ban %N (time %d mins.) (reason ^"%s^") (details ^"%s^")", admin, id, time, reason, details);
 	}
 }
+
 /*
 public APS_PlayerBanned(const admin, const id, const time, const reason[], const details[]) {
 	log_amx("Punishment: %N ban %N (time %d mins.) (reason ^"%s^") (details ^"%s^")", admin, id, time, reason, details);

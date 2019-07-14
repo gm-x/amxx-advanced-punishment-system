@@ -1,5 +1,5 @@
 #if defined _aps_consts_included
-  #endinput
+	#endinput
 #endif
 #define _aps_consts_included
 
@@ -14,7 +14,7 @@ enum APS_PunisherType {
 	APS_PunisherTypeUser,
 	APS_PunisherTypeServer
 };
- 
+
 enum APS_PunishmentStatus {
 	APS_PunishmentStatusActive,
 	APS_PunishmentStatusExpired,
