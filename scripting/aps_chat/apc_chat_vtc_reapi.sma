@@ -14,7 +14,7 @@ public plugin_init() {
 	}
 }
 
-public APP_Inited() {
+public APS_Inited() {
 	TypeId = APS_GetTypeIndex("chat");
 	if (TypeId == APS_InvalidType) {
 		set_fail_state("[APS CHAT VTC REAPI] chat type not found");

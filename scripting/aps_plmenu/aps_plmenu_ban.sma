@@ -8,7 +8,7 @@ public plugin_init() {
     register_plugin("[APS] Player Menu Ban", "0.1.0", "GM-X Team");
 }
 
-public APP_Inited() {
+public APS_Inited() {
     TypeId = APS_GetTypeIndex("ban")
     if (TypeId != APS_InvalidType) {
         APS_PlMenu_PushItem("Ban", "HandleAction", true, true);

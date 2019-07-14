@@ -9,7 +9,7 @@ public plugin_init() {
 	register_plugin("[APS] Chat VTC", "0.1.1", "GM-X Team");
 }
 
-public APP_Inited() {
+public APS_Inited() {
 	TypeId = APS_GetTypeIndex("chat");
 	if (TypeId == APS_InvalidType) {
 		set_fail_state("[APS CHAT VTC] chat type not found");

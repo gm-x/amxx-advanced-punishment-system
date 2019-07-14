@@ -18,7 +18,7 @@ enum APS_Type {
 stock const APS_API_VERSION_STR[] = "0.1.0";
 
 forward APS_Initing();
-forward APP_Inited();
+forward APS_Inited();
 forward APS_PlayerPunishing(const id, const APS_Type:type);
 forward APS_PlayerPunishing(const id, const APS_Type:type);
 forward APS_PlayerExonerating(const id, const APS_Type:type);

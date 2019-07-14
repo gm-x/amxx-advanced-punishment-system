@@ -1,5 +1,6 @@
 #include <amxmodx>
 #include <aps>
+#include <aps_plmenu>
 
 #define CHECK_NATIVE_ARGS_NUM(%1,%2,%3) \
 	if (%1 < %2) { \
@@ -23,9 +24,7 @@ new APS_Type:TypeId;
 
 public plugin_init() {
 	register_plugin("[APS] Ban", "0.1.0", "GM-X Team");
-	
 	register_concmd("aps_ban", "CmdBan", ADMIN_BAN);
-
 	Forwards[FWD_PlayerBanKick] = CreateMultiForward("APS_PlayerBanKick", ET_STOP, FP_CELL);
 }
 
@@ -40,6 +39,12 @@ public plugin_end() {
 
 public APS_Initing() {
 	TypeId = APS_RegisterType("ban");
+	APS_PlMenu_PushType("BAN", "HandlePlMenuAction", true, true);
+}
+
+public HandlePlMenuAction(const admin, const player, const reason[], const time) {
+	server_print("^t BAN %d %d '%s' %d", admin, player, reason, time);
+	// APS_PunishPlayer(player, TypeId, time, reason, "", admin);
 }
 
 public APS_PlayerPunished(const id, const APS_Type:type) {
@@ -318,7 +323,9 @@ consolePrint(const id) {
 				len += APS_GetReason(buffer[len], charsmax(buffer) - len - 1);
 			}
 
-			case TokenCreated : {}
+			case TokenCreated : {
+				// len += format_time(buffer[len], charsmax(buffer) - len - 1, "%m/%d/%Y %X")
+			}
 			case TokenTime : {}
 			case TokenLeft : {}
 

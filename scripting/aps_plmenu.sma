@@ -40,8 +40,7 @@ new TeamNames[][] = {
 };
 
 enum _:type_s {
-	TypePluginID,
-	TypeFuncID,
+	TypeHandler,
 	bool:TypeReason,
 	bool:TypeTime,
 	TypeTitle[MAX_TYPE_TITLE_LENGTH]
@@ -66,6 +65,7 @@ enum _:player_menus_s {
 	PlayerMenuIds[MAX_PLAYERS],
 };
 
+new FwReturn;
 new Array:Types, TypesNum, Type[type_s];
 new Array:Reasons, ReasonsNum, Reason[reason_s];
 new Array:Times, TimesNum;
@@ -73,6 +73,8 @@ new PlayersMenu[MAX_PLAYERS + 1][player_menus_s];
 
 public plugin_init() {
 	register_plugin("[APS] Players Menu", "0.1.0", "GM-X Team");
+
+	register_dictionary("common.txt");
 
 	RegisterHookChain(RG_CBasePlayer_SetClientUserInfoName, "CBasePlayer_SetClientUserInfoName_Post", true);
 
@@ -144,6 +146,19 @@ public CBasePlayer_SetClientUserInfoName_Post(const id, const infobuffer[], cons
 public CmdPlayersMenu(const id) {
 	displayMenu(id);
 	return PLUGIN_HANDLED;
+}
+
+public APS_PlMenu_PushType_Handler(const title[], const handler, const bool:reason, const bool:time) {
+	clear_type();
+
+	copy(Type[TypeTitle], charsmax(Type[TypeTitle]), title);
+	Type[TypeHandler] = handler;
+	Type[TypeReason] = reason;
+	Type[TypeTime] = time;
+	new ret = ArrayPushArray(Types, Type, sizeof Type);
+	TypesNum = ArraySize(Types);
+
+	return ret;
 }
 
 displayMenu(const id) {
@@ -341,7 +356,7 @@ showConfirmMenu(const id) {
 	}
 
 	new keys = MENU_KEY_1 | MENU_KEY_2;
-	len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[1] \w%l^n%s\r[2] \w%l", MENU_TAB, "APS_MENU_YES", MENU_TAB, "APS_MENU_NO");
+	len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[1] \w%l^n%s\r[2] \w%l", MENU_TAB, "YES", MENU_TAB, "NO");
 
 	show_menu(id, keys, menu, -1, "APS_CONFIRM_MENU");
 }
@@ -448,17 +463,15 @@ public HandleConfirmMenu(const id, const key) {
 		return;
 	}
 
-	if (key == 0 && callfunc_begin_i(Type[TypeFuncID], Type[TypePluginID]) == 1) {
-		callfunc_push_int(id);
-		callfunc_push_int(PlayersMenu[id][PlayerMenuTarget]);
+	if (key == 0) {
+		new reason[MAX_REASON_TITLE_LENGTH];
 		if (PlayersMenu[id][PlayerMenuReason] >= 0) {
 			get_reason(PlayersMenu[id][PlayerMenuReason]);
-			callfunc_push_str(Reason[ReasonTitle]);
-		} else {
-			callfunc_push_str("");
+			copy(reason, charsmax(reason), Reason[ReasonTitle]);
 		}
-		callfunc_push_int(PlayersMenu[id][PlayerMenuTime]);
-		callfunc_end();
+		get_type(PlayersMenu[id][PlayerMenuType]);
+		new time = PlayersMenu[id][PlayerMenuTime] != -1 ? ArrayGetCell(Times, PlayersMenu[id][PlayerMenuTime]) : 0;
+		ExecuteForward(Type[TypeHandler], FwReturn, id, PlayersMenu[id][PlayerMenuTarget], reason, time);
 	}
 }
 
@@ -538,46 +551,46 @@ getMenuPagesNum(elements_num, per_page) {
 }
 
 // NATIVES
-public plugin_natives() {
-	register_native("APS_PlMenu_PushItem", "NativePushItem", 0);
-}
+// public plugin_natives() {
+	// register_native("APS_PlMenu_PushItem", "NativePushItem", 0);
+// }
 
-public NativePushItem(plugin, argc) {
-	CHECK_NATIVE_ARGS_NUM(argc, 2, 0)
-	enum { arg_title = 1, arg_func, arg_reason, arg_time };
+// public NativePushItem(plugin, argc) {
+// 	CHECK_NATIVE_ARGS_NUM(argc, 2, 0)
+// 	enum { arg_title = 1, arg_func, arg_reason, arg_time };
 
-	clear_type();
+// 	clear_type();
 
-	Type[TypePluginID] = plugin;
+// 	Type[TypePluginID] = plugin;
 
-	get_string(arg_title, Type[TypeTitle], charsmax(Type[TypeTitle]));
+// 	get_string(arg_title, Type[TypeTitle], charsmax(Type[TypeTitle]));
 
-	new func[64];
-	get_string(arg_func, func, charsmax(func));
-	if (func[0] == EOS) {
-		log_error(AMX_ERR_NATIVE, "Could not find function %s", func);
-		return 0;
-	}
+// 	new func[64];
+// 	get_string(arg_func, func, charsmax(func));
+// 	if (func[0] == EOS) {
+// 		log_error(AMX_ERR_NATIVE, "Could not find function %s", func);
+// 		return 0;
+// 	}
 
-	Type[TypeFuncID] = get_func_id(func, plugin);
-	if (Type[TypeFuncID] == -1) {
-		log_error(AMX_ERR_NATIVE, "Could not find function %s", func);
-		return -1;
-	}
+// 	Type[TypeFuncID] = get_func_id(func, plugin);
+// 	if (Type[TypeFuncID] == -1) {
+// 		log_error(AMX_ERR_NATIVE, "Could not find function %s", func);
+// 		return -1;
+// 	}
 
-	if (argc >= arg_reason) {
-		Type[TypeReason] = bool:get_param(arg_reason);
-	} else {
-		Type[TypeReason] = false;
-	}
+// 	if (argc >= arg_reason) {
+// 		Type[TypeReason] = bool:get_param(arg_reason);
+// 	} else {
+// 		Type[TypeReason] = false;
+// 	}
 
-	if (argc >= arg_time) {
-		Type[TypeTime] = bool:get_param(arg_time);
-	} else {
-		Type[TypeTime] = false;
-	}
+// 	if (argc >= arg_time) {
+// 		Type[TypeTime] = bool:get_param(arg_time);
+// 	} else {
+// 		Type[TypeTime] = false;
+// 	}
 
-	ArrayPushArray(Types, Type, sizeof Type);
-	TypesNum = ArraySize(Types);
-	return 1;
-}
+// 	ArrayPushArray(Types, Type, sizeof Type);
+// 	TypesNum = ArraySize(Types);
+// 	return 1;
+// }
