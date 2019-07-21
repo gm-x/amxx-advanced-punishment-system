@@ -1,6 +1,6 @@
 # AmxModX Advanced Punishment System
 
-Requires
+Requirements
 =============
 
 - [GM-X Amxx core plugin](https://github.com/gm-x/gmx-amxx)
