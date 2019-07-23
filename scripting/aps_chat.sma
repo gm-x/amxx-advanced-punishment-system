@@ -81,7 +81,7 @@ public CmdHandle(const id, const access) {
 		console_print(id, "Player not found");
 		return PLUGIN_HANDLED;
 	}
- 
+
 	if(read_argc() < 3) {
 		console_print(id, "USAGE: %s <steamID or nickname or #authid or IP> <time in mins> <reason> [details]", Commands[command][CmdName]);
 		return PLUGIN_HANDLED;
