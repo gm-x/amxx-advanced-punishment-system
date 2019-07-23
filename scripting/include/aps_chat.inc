@@ -9,6 +9,6 @@ enum (<<=1) {
     APS_Chat_Text,
 }
 
-native APS_ChatGetBlocketType(const player);
-native bool:APS_ChatGetBlocketText(const player);
-native bool:APS_ChatGetBlocketVoice(const player);
+native APS_ChatGetBlockedType(const player);
+native bool:APS_ChatGetBlockedText(const player);
+native bool:APS_ChatGetBlockedVoice(const player);

@@ -109,12 +109,12 @@ getCommandByName(const name[]) {
 }
 
 public plugin_natives() {
-	register_native("APS_ChatGetBlocketType", "NativeChatGetBlocketType", 0);
-	register_native("APS_ChatGetBlocketText", "NativeChatGetBlocketText", 0);
-	register_native("APS_ChatGetBlocketVoice", "NativeChatGetBlocketVoice", 0);
+	register_native("APS_ChatGetBlockedType", "NativeChatGetBlockedType", 0);
+	register_native("APS_ChatGetBlockedText", "NativeChatGetBlockedText", 0);
+	register_native("APS_ChatGetBlockedVoice", "NativeChatGetBlockedVoice", 0);
 }
 
-public NativeChatGetBlocketType(plugin, argc) {
+public NativeChatGetBlockedType(plugin, argc) {
 	enum { arg_player = 1 };
 
 	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
@@ -125,7 +125,7 @@ public NativeChatGetBlocketType(plugin, argc) {
 	return Blocked[player];
 }
 
-public NativeChatGetBlocketText(plugin, argc) {
+public NativeChatGetBlockedText(plugin, argc) {
 	enum { arg_player = 1 };
 
 	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
@@ -136,7 +136,7 @@ public NativeChatGetBlocketText(plugin, argc) {
 	return Blocked[player] & APS_Chat_Text ? 1 : 0;
 }
 
-public NativeChatGetBlocketVoice(plugin, argc) {
+public NativeChatGetBlockedVoice(plugin, argc) {
 	enum { arg_player = 1 };
 
 	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)

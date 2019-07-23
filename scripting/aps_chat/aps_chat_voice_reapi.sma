@@ -8,7 +8,7 @@ public plugin_init() {
 }
 
 public CSGameRules_CanPlayerHearPlayer_Pre(const listener, const sender) {
-	if(APS_ChatGetBlocketVoice(sender)) {
+	if (APS_ChatGetBlockedVoice(sender)) {
 		SetHookChainReturn(ATYPE_INTEGER, 0);
 		return HC_SUPERCEDE;
 	}
