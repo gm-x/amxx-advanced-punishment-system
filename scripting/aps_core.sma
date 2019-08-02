@@ -333,6 +333,7 @@ public NativePunishPlayer(plugin, argc) {
 	if (GMX_PlayerIsLoaded(player)) {
 		grip_json_object_set_number(request, "player_id", GMX_PlayerGetPlayerId(player));
 		GMX_MakeRequest("punish", request, "OnPunished", get_user_userid(player));
+		grip_destroy_json_value(request);
 	} else {
 		new steamid[24], nick[32], ip[32];
 		get_user_authid(player, steamid, charsmax(steamid));
@@ -346,6 +347,7 @@ public NativePunishPlayer(plugin, argc) {
 		grip_json_object_set_string(request, "nick", nick);
 		grip_json_object_set_string(request, "ip", ip);
 		GMX_MakeRequest("punish/immediately", request, "OnPunished", get_user_userid(player));
+		grip_destroy_json_value(request);
 	}
 
 	return 1;
