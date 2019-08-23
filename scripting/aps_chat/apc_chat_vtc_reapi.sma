@@ -1,6 +1,5 @@
 #include <amxmodx>
 #include <reapi>
-// #include <VtcApi>
 #include <aps>
 #include <aps_chat>
 

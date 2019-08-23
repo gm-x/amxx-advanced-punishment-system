@@ -31,3 +31,20 @@ stock APS_PlMenu_PushType(const title[], const handler[], const bool:reason = fa
 		}
     }
 }
+
+
+// enum APC_PlMenu_Step {
+// 	APC_PlMenu_Reason,
+// 	APC_PlMenu_Time,
+// 	APC_PlMenu_Confirm,
+// };
+
+// enum AP_PlMenu_Handler {
+// 	APC_PlMenu_Ignore = -1,
+// 	APC_PlMenu_Default,
+// };
+
+
+// APC_PlMenu_Register("BAN", "PlMenuHandleBan");
+// APC_PlMenu_Option(APC_PlMenu_Reason, APC_PlMenu_Ignore);
+// APC_PlMenu_Continue(APC_PlMenu_Reason, 1);

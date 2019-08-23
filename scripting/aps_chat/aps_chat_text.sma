@@ -49,7 +49,7 @@ public client_disconnected(id) {
 public APS_Inited() {
 	TypeId = APS_GetTypeIndex("chat");
 	if (TypeId == APS_InvalidType) {
-		set_fail_state("[APS CHAT VTC] chat module not found");
+		set_fail_state("[APS CHAT TEXT] chat module not found");
 	}
 }
 
