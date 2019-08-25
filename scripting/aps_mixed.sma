@@ -55,12 +55,23 @@ public plugin_end() {
 	DestroyForward(Forwards[FWD_PlayerSlayed]);
 }
 
-public APS_Inited() {
-	APS_PlMenu_PushType("APS_TYPE_KICK", "HandlePlMenuKickAction", true, false, true);
-	APS_PlMenu_PushType("APS_TYPE_SLAP_SLAY", "HandlePlMenuSlapAction", false, false, false);
+public APS_PlMenu_Inited() {
+	APS_PlMenu_Add(
+		"kick", "APS_TYPE_KICK", 
+		APS_PlMenu_CreateHandler("HandlePlMenuKickAction"),
+		.timeHandler = APS_PlMenu_Handler_Invaild
+	);
+	APS_PlMenu_Add(
+		"slap", "APS_TYPE_SLAP",
+		APS_PlMenu_CreateHandler("HandlePlMenuSlapAction"),
+		.resonHandler = APS_PlMenu_Handler_Invaild, 
+		.timeHandler = APS_PlMenu_Handler_Invaild, 
+		.extraHandler = APS_PlMenu_Handler_Invaild,
+		.needConfirm = false
+	);
 }
 
-public HandlePlMenuKickAction(const admin, const player, const reason[]) {
+public HandlePlMenuKickAction(const admin, const player, const reason[], const itme, const extra) {
 	playerKick(admin, player, reason);
 }
 
@@ -73,7 +84,7 @@ showSlapSlayMenu(const id) {
 	SetGlobalTransTarget(id);
 
 	new menu[MAX_MENU_LENGTH];
-	new len = formatex(menu, charsmax(menu), "%s\r%l^n^n", MENU_TAB, "APS_MENU_SLAP_SLAY_TITLE");
+	new len = formatex(menu, charsmax(menu), "%s\r%l^n^n", MENU_TAB, "APS_MENU_SLAP_TITLE");
 
 	new keys = MENU_KEY_0 | MENU_KEY_8;
 
@@ -82,7 +93,7 @@ showSlapSlayMenu(const id) {
 		len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \w%l^n", MENU_TAB, ++item, "APS_MENU_ITEM_SLAP", Damage[i]);
 	}
 
-	len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[8] \w%l", MENU_TAB, "APS_MENU_ITEM_SLAY");
+	// len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[8] \w%l", MENU_TAB, "APS_MENU_ITEM_SLAY");
 
 	len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%l", MENU_TAB, "EXIT");
 

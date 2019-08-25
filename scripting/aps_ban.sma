@@ -30,8 +30,8 @@ public APS_Initing() {
 	TypeId = APS_RegisterType("ban");
 }
 
-public APS_Inited() {
-	APS_PlMenu_PushType("APS_TYPE_BAN", "HandlePlMenuAction", true, true, true);
+public APS_PlMenu_Inited() {
+	APS_PlMenu_Add("ban", "APS_TYPE_BAN");
 }
 
 public HandlePlMenuAction(const admin, const player, const reason[], const time) {

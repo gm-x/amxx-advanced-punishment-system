@@ -3,48 +3,81 @@
 #endif
 #define _aps_plmenu_included
 
-stock APS_PlMenu_PushType(const title[], const handler[], const bool:reason = false, const time = false, const confirm = false) {
-    new pluginID = get_plugin(-1);
-    new fwd = CreateOneForward(pluginID, handler, FP_CELL, FP_CELL, FP_STRING, FP_CELL);
+enum APS_PlMenu_Handler {
+	APS_PlMenu_Handler_Default = -2,
+	APS_PlMenu_Handler_Invaild = -1,
+};
 
-    for(new i, n = get_pluginsnum(), status[2], func; i < n; i++) {
-		get_plugin(i, .status = status, .len5 = charsmax(status));
+forward APS_PlMenu_Inited();
 
-		//status debug || status running
-		if(status[0] != 'd' && status[0] != 'r') {
-			continue;
-		}
-	
-		func = get_func_id("APS_PlMenu_PushType_Handler", i);
-
-		if(func == -1) {
-			continue;
-		}
-
-		if(callfunc_begin_i(func, i) == 1) {
-			callfunc_push_str(title);
-			callfunc_push_int(fwd);
-			callfunc_push_int(_:reason);
-			callfunc_push_int(_:time);
-			callfunc_push_int(_:confirm);
-			callfunc_end();
-		}
-    }
+// handler(const admin, const player, const reason[], const itme, const extra)
+stock APS_PlMenu_Handler:APS_PlMenu_CreateHandler(const handler[]) {
+    return APS_PlMenu_Handler:CreateOneForward(get_plugin(-1), handler, FP_CELL, FP_CELL, FP_STRING, FP_CELL, FP_CELL);
 }
 
+stock APS_PlMenu_DestroyHandler(APS_PlMenu_Handler:handler) {
+	if (handler >= 0) {
+		DestroyForward(handler);
+	}
+}
 
-// enum APC_PlMenu_Step {
-// 	APC_PlMenu_Reason,
-// 	APC_PlMenu_Time,
-// 	APC_PlMenu_Confirm,
-// };
+stock bool:APS_PlMenu_Add(
+	const type[], const title[], 
+	const APS_PlMenu_Handler:handler = APS_PlMenu_Handler_Default, 
+	const APS_PlMenu_Handler:resonHandler = APS_PlMenu_Handler_Default, 
+	const APS_PlMenu_Handler:timeHandler = APS_PlMenu_Handler_Default, 
+	const APS_PlMenu_Handler:extraHandler = APS_PlMenu_Handler_Invaild,
+	const bool:needConfirm = true
+) {
+	new pluginID = APS_GetPluginID();
+	if (pluginID == -1) {
+		return false;
+	}
+	new func = get_func_id("APS_PlMenu_Add", pluginID);
+	if (func == -1) {
+		return false;
+	}
+	
+	if (callfunc_begin_i(func, pluginID) != 1) {
+		return false;
+	}
+	callfunc_push_str(type);
+	callfunc_push_str(title);
+	callfunc_push_int(_:handler);
+	callfunc_push_int(_:resonHandler);
+	callfunc_push_int(_:timeHandler);
+	callfunc_push_int(_:extraHandler);
+	callfunc_push_int(_:needConfirm);
+	callfunc_end();
+	
+	return true;
+}
 
-// enum AP_PlMenu_Handler {
-// 	APC_PlMenu_Ignore = -1,
-// 	APC_PlMenu_Default,
-// };
+stock APS_GetPluginID() {
+	static pluginID = -1;
+	if (pluginID == -1) {
+		new plugin = get_plugin(-1);
+		
+		for(new i, n = get_pluginsnum(), status[2], func; i < n; i++) {
+			if (plugin == i) {
+				continue;
+			}
+			
+			get_plugin(i, .status = status, .len5 = charsmax(status));
 
+			//status debug || status running
+			if (status[0] != 'd' && status[0] != 'r') {
+				continue;
+			}
+		
+			func = get_func_id("APS_PlMenu_Main", i);
 
-// APC_PlMenu_Register("BAN", "PlMenuHandleBan");
-// APC_PlMenu_Option(APC_PlMenu_Reason, APC_PlMenu_Ignore);
-// APC_PlMenu_Continue(APC_PlMenu_Reason, 1);
+			if (func != -1) {
+				pluginID = i;
+				break;
+			}
+		}
+	}
+	
+	return pluginID;
+}
