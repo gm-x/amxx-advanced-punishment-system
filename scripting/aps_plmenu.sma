@@ -1,6 +1,7 @@
 #pragma semicolon 1
 
 #include <amxmodx>
+#include <time>
 #include <reapi>
 #include <grip>
 #include <gmx>
@@ -93,6 +94,7 @@ public plugin_init() {
 
 	register_dictionary("aps_plmenu.txt");
 	register_dictionary("common.txt");
+	register_dictionary("time.txt");
 
 	RegisterHookChain(RG_CBasePlayer_SetClientUserInfoName, "CBasePlayer_SetClientUserInfoName_Post", true);
 
@@ -107,6 +109,12 @@ public plugin_init() {
 	Items = ArrayCreate(item_s, 0);
 	Reasons = ArrayCreate(reason_s, 0);
 	Times = ArrayCreate(1, 0);
+
+	parseTimes("1i 1d 1w 1m 1y");
+	hook_cvar_change(create_cvar(
+		"aps_plmenu_times",
+		"1i 1d 1w 1m 1y"
+	), "HooCvarTimes");
 }
 
 public plugin_cfg() {
@@ -131,6 +139,10 @@ public plugin_end() {
 
 	ArrayDestroy(Reasons);
 	ArrayDestroy(Times);
+}
+
+public HooCvarTimes(const pcvar, const oldValue[], const newValue[]) {
+	parseTimes(newValue);
 }
 
 public APS_PlMenu_Main() {}
@@ -384,10 +396,12 @@ showTimesMenu(const id, const page = 0) {
 	new len = formatex(menu, charsmax(menu), "%s\r%l^t\d%d/%d^n^n", MENU_TAB, "APS_MENU_TIMES_TITLE", Players[id][PlayerPage] + 1, pages + 1);
 
 	new keys = MENU_KEY_0;
-	for (new i = start, item, time; i < end; i++) {
+	for (new i = start, item, time, title[64]; i < end; i++) {
 		time = ArrayGetCell(Times, i);
 		keys |= (1 << item);
-		len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \w%d^n", MENU_TAB, ++item, time);
+
+		get_time_length(id, time, timeunit_seconds, title, charsmax(title));
+		len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \w%s^n", MENU_TAB, ++item, title);
 	}
 
 	new tmp[15];
@@ -420,6 +434,14 @@ showConfirmMenu(const id) {
 	if (Players[id][PlayerReason] >= 0) {
 		get_reason(Players[id][PlayerReason]);
 		len += formatex(menu[len], charsmax(menu) - len, "%s\y%l\w: \y%s^n", MENU_TAB, "APS_MENU_REASON", Reason[ReasonTitle]);
+	}
+
+	if (Players[id][PlayerTime] >= 0) {
+		new time[64];
+		get_time_length(id, Players[id][PlayerTime], timeunit_seconds, time, charsmax(time));
+		len += formatex(menu[len], charsmax(menu) - len, "%s\y%l\w: \y%s^n", MENU_TAB, "APS_MENU_TIME", time);
+	} else {
+		len += formatex(menu[len], charsmax(menu) - len, "%s\y%l\w: \r%l^n", MENU_TAB, "APS_MENU_TIME", "APS_MENU_FOREVER");
 	}
 
 	new keys = MENU_KEY_1 | MENU_KEY_2;
@@ -515,7 +537,10 @@ public HandleTimesMenu(const id, const key) {
 		}
 
 		default: {
-			Players[id][PlayerTime] = (Players[id][PlayerPage] * 8) + key;
+			new item = (Players[id][PlayerPage] * 8) + key;
+			if (0 <= item < TimesNum) {
+				Players[id][PlayerTime] = ArrayGetCell(Times, item);
+			}
 			nextStep(id);
 		}
 	}
@@ -652,4 +677,62 @@ getMenuPage(cur_page, elements_num, per_page, &start, &end) {
 
 getMenuPagesNum(elements_num, per_page) {
 	return (elements_num - 1) / per_page;
+}
+
+stock parseTimes(const value[]) {
+	ArrayClear(Times);
+	new i, t, k;
+	while (value[i] != EOS) {
+		switch (value[i]) {
+			case '0'..'9': {
+				t = (t * 10) + (value[i] - '0');
+			}
+
+			case 'i': {
+				k += t * 60;
+				t = 0;
+			}
+
+			case 'h': {
+				k += t * 3600;
+				t = 0;
+			}
+
+			case 'd': {
+				k += t * 86400;
+				t = 0;
+			}
+
+			case 'w': {
+				k += t * 604800;
+				t = 0;
+			}
+
+			case 'm': {
+				k += t * 2592000;
+				t = 0;
+			}
+
+			case 'y': {
+				k += t * 31104000;
+				t = 0;
+			}
+
+			case ' ': {
+				if (k + t > 0) {
+					ArrayPushCell(Times, k + t);
+				}
+				t = 0;
+				k = 0;
+			}
+		}
+
+		i++;
+	}
+
+	if (i > 0) {
+		ArrayPushCell(Times, k + t);
+	}
+
+	TimesNum = ArraySize(Times);
 }

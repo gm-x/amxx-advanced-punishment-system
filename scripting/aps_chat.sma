@@ -66,9 +66,9 @@ showChatExtraMenu(const id) {
 	}
 
 	if (PlMenuExtraData[id] & APS_Chat_Text) {
-		len += formatex(menu[len], charsmax(menu) - len, "%s\r[1] \r%l \r+^n", MENU_TAB, "APS_CHAT_EXTRA_MENU_TEXT");
+		len += formatex(menu[len], charsmax(menu) - len, "%s\r[2] \r%l \r+^n", MENU_TAB, "APS_CHAT_EXTRA_MENU_TEXT");
 	} else {
-		len += formatex(menu[len], charsmax(menu) - len, "%s\r[1] \w%l^n", MENU_TAB, "APS_CHAT_EXTRA_MENU_TEXT");
+		len += formatex(menu[len], charsmax(menu) - len, "%s\r[2] \w%l^n", MENU_TAB, "APS_CHAT_EXTRA_MENU_TEXT");
 	}
 
 	if (PlMenuExtraData[id] != 0) {
