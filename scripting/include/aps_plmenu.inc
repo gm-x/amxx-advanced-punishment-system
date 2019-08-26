@@ -53,6 +53,62 @@ stock bool:APS_PlMenu_Add(
 	return true;
 }
 
+stock bool:APS_PlMenu_NextStep(const admin, const value) {
+	new pluginID = APS_GetPluginID();
+	if (pluginID == -1) {
+		return false;
+	}
+	new func = get_func_id("APS_PlMenu_NextStep", pluginID);
+	if (func == -1) {
+		return false;
+	}
+	
+	if (callfunc_begin_i(func, pluginID) != 1) {
+		return false;
+	}
+	callfunc_push_int(admin);
+	callfunc_push_int(value);
+	callfunc_end();
+	
+	return true;
+}
+
+stock bool:APS_PlMenu_PrevStep(const admin) {
+	new pluginID = APS_GetPluginID();
+	if (pluginID == -1) {
+		return false;
+	}
+	new func = get_func_id("APS_PlMenu_PrevStep", pluginID);
+	if (func == -1) {
+		return false;
+	}
+	
+	if (callfunc_begin_i(func, pluginID) != 1) {
+		return false;
+	}
+	callfunc_push_int(admin);
+	callfunc_end();
+	
+	return true;
+}
+
+stock APS_PlMenu_GetPlayer(const admin) {
+	new pluginID = APS_GetPluginID();
+	if (pluginID == -1) {
+		return -1;
+	}
+	new func = get_func_id("APS_PlMenu_GetPlayer", pluginID);
+	if (func == -1) {
+		return -1;
+	}
+	
+	if (callfunc_begin_i(func, pluginID) != 1) {
+		return -1;
+	}
+	callfunc_push_int(admin);
+	return callfunc_end();
+}
+
 stock APS_GetPluginID() {
 	static pluginID = -1;
 	if (pluginID == -1) {

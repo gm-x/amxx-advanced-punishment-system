@@ -36,7 +36,7 @@ public plugin_init() {
 	register_concmd("amx_slap", "CmdSlap", ADMIN_SLAY);
 	register_concmd("amx_slay", "CmdSlay", ADMIN_SLAY);
 
-	register_menucmd(register_menuid("APS_SLAP_SLAY_MENU"), 1023, "HandleSlapSlayMenu");
+	register_menucmd(register_menuid("APS_SLAP_MENU"), 1023, "HandleSlapMenu");
 
 	Forwards[FWD_PlayerKick] = CreateMultiForward("APS_PlayerKick", ET_STOP, FP_CELL, FP_CELL, FP_STRING);
 	Forwards[FWD_PlayerKicked] = CreateMultiForward("APS_PlayerKicked", ET_IGNORE, FP_CELL, FP_CELL, FP_STRING);
@@ -69,6 +69,14 @@ public APS_PlMenu_Inited() {
 		.extraHandler = APS_PlMenu_Handler_Invaild,
 		.needConfirm = false
 	);
+	APS_PlMenu_Add(
+		"slay", "APS_TYPE_SLAY",
+		APS_PlMenu_CreateHandler("HandlePlMenuSlayAction"),
+		.resonHandler = APS_PlMenu_Handler_Invaild, 
+		.timeHandler = APS_PlMenu_Handler_Invaild, 
+		.extraHandler = APS_PlMenu_Handler_Invaild,
+		.needConfirm = true
+	);
 }
 
 public HandlePlMenuKickAction(const admin, const player, const reason[], const itme, const extra) {
@@ -80,31 +88,32 @@ public HandlePlMenuSlapAction(const admin, const player) {
 	showSlapSlayMenu(admin);
 }
 
+public HandlePlMenuSlayAction(const admin, const player) {
+	playerSlay(admin, player);
+}
+
 showSlapSlayMenu(const id) {
 	SetGlobalTransTarget(id);
 
 	new menu[MAX_MENU_LENGTH];
 	new len = formatex(menu, charsmax(menu), "%s\r%l^n^n", MENU_TAB, "APS_MENU_SLAP_TITLE");
 
-	new keys = MENU_KEY_0 | MENU_KEY_8;
+	new keys = MENU_KEY_0;
 
 	for (new i = 0, item; i < DamageNum; i++) {
 		keys |= (1 << item);
 		len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \w%l^n", MENU_TAB, ++item, "APS_MENU_ITEM_SLAP", Damage[i]);
 	}
 
-	// len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[8] \w%l", MENU_TAB, "APS_MENU_ITEM_SLAY");
+	len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%l", MENU_TAB, "BACK");
 
-	len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%l", MENU_TAB, "EXIT");
-
-	show_menu(id, keys, menu, -1, "APS_SLAP_SLAY_MENU");
+	show_menu(id, keys, menu, -1, "APS_SLAP_MENU");
 }
 
-public HandleSlapSlayMenu(id, key) {
+public HandleSlapMenu(const id, const key) {
 	switch (key) {
-		case 9: {}
-		case 7: {
-			playerSlay(id, Players[id])
+		case 9: {
+			APS_PlMenu_PrevStep(id);
 		}
 		default: {
 			playerSlap(id, Players[id], Damage[key]);

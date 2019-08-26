@@ -20,7 +20,7 @@
 		%3(%1); \
 		return; \
 	} else if (Item[%2] != Handler_Invaild) { \
-		ExecuteForward(Item[%2], FwReturn, %1, Players[%1][PlayerTarget], Reason[ReasonTitle], Players[%1][PlayerTime], Players[%1][PlayerExtra]); \
+		callHandler(%1, %2); \
 		return; \
 	} else \
 		Players[%1][PlayerStep]+=%4
@@ -59,13 +59,6 @@ enum item_s {
 	ItemTimeHandler,
 	ItemExtraHandler,
 	bool:ItemNeedConfirm
-};
-
-enum _:type_s {
-	TypeHandler,
-	bool:TypeReason,
-	bool:ItemTime,
-	bool:TypeConfirm
 };
 
 enum _:reason_s {
@@ -197,6 +190,36 @@ public APS_PlMenu_Add(const type[], const title[], const handler, const resonHan
 	Item[ItemExtraHandler] = extraHandler != Handler_Default ? extraHandler : Handler_Invaild;
 	Item[ItemNeedConfirm] = needConfirm;
 	return ArrayPushArray(Items, Item, sizeof Item);
+}
+
+public APS_PlMenu_NextStep(const id, const value) {
+	if (!is_user_connected(id)) {
+		return;
+	}
+
+	switch (Players[id][PlayerStep]) {
+		case Step_Reason: {
+			Players[id][PlayerReason] = value;
+		}
+
+		case Step_Time: {
+			Players[id][PlayerTime] = value;
+		}
+
+		case Step_Extra: {
+			Players[id][PlayerExtra] = value;
+		}
+	}
+
+	nextStep(id);
+}
+
+public APS_PlMenu_PrevStep(const id) {
+	if (!is_user_connected(id)) {
+		return;
+	}
+
+	prevStep(id);
 }
 
 displayMenu(const id) {
@@ -393,7 +416,7 @@ showConfirmMenu(const id) {
 	new len = formatex(menu, charsmax(menu), "%s\r%l^n^n", MENU_TAB, "APS_MENU_CONFIRM_TITLE");
 
 	get_item(Players[id][PlayerItem]);
-	len += formatex(menu[len], charsmax(menu) - len, "%s\y%l\w: \y%s^n", MENU_TAB, "APS_MENU_TYPE", Item[ItemTitle]);
+	len += formatex(menu[len], charsmax(menu) - len, "%s\y%l\w: \y%l^n", MENU_TAB, "APS_MENU_TYPE", Item[ItemTitle]);
 	if (Players[id][PlayerReason] >= 0) {
 		get_reason(Players[id][PlayerReason]);
 		len += formatex(menu[len], charsmax(menu) - len, "%s\y%l\w: \y%s^n", MENU_TAB, "APS_MENU_REASON", Reason[ReasonTitle]);
@@ -572,6 +595,13 @@ makeAction(const id) {
 	} else if (Item[ItemType] != APS_InvalidType) {
 		APS_PunishPlayer(Players[id][PlayerTarget], Item[ItemType], Players[id][PlayerTime], Reason[ReasonTitle], "", id, Players[id][PlayerExtra]);
 	}
+}
+
+callHandler(const id, const item_s:handler) {
+	if (0 <= Players[id][PlayerReason] < ArraySize(Reasons)) {
+		get_reason(Players[id][PlayerReason]);
+	}
+	ExecuteForward(Item[handler], FwReturn, id, Players[id][PlayerTarget], Reason[ReasonTitle], Players[id][PlayerTime], Players[id][PlayerExtra]);
 }
 
 findPlayersForMenu(const id, const TeamName:team) {
