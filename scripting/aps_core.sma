@@ -41,6 +41,7 @@ enum _:PunishmentStruc {
 	PunishmentID,
 	PunishmentType,
 	PunishmentExtra,
+	PunishmentCreated,
 	PunishmentTime,
 	PunishmentExpired,
 	PunishmentReason[APS_MAX_TYPE_LENGTH],
@@ -209,6 +210,8 @@ parsePunishment(const GripJSONValue:punishment) {
 	Punishment[PunishmentExtra] = grip_json_get_type(tmp) != GripJSONNull ? grip_json_get_number(tmp) : 0;
 	grip_destroy_json_value(tmp);
 
+	Punishment[PunishmentCreated] = grip_json_object_get_number(punishment, "created_at");
+
 	tmp = grip_json_object_get_value(punishment, "expired_at");
 	Punishment[PunishmentExpired] = grip_json_get_type(tmp) != GripJSONNull ? grip_json_get_number(tmp) : 0;
 	grip_destroy_json_value(tmp);
@@ -236,6 +239,8 @@ public plugin_natives() {
 	register_native("APS_SetExtra", "NativeSetExtra", 0);
 	register_native("APS_GetTime", "NativeGetTime", 0);
 	register_native("APS_SetTime", "NativeSetTime", 0);
+	register_native("APS_GetCreated", "NativeGetCreated", 0);
+	register_native("APS_SetCreated", "NativeSetCreated", 0);
 	register_native("APS_GetExpired", "NativeGetExpired", 0);
 	register_native("APS_SetExpired", "NativeSetExpired", 0);
 	register_native("APS_GetReason", "NativeGetReason", 0);
@@ -372,7 +377,7 @@ public NativeSetExtra(plugin, argc) {
 }
 
 public NativeGetTime(plugin, argc) {
-	return Punishment[PunishmentExpired];
+	return Punishment[PunishmentTime];
 }
 
 public NativeSetTime(plugin, argc) {
@@ -382,8 +387,19 @@ public NativeSetTime(plugin, argc) {
 	return 1;
 }
 
+public NativeGetCreated(plugin, argc) {
+	return Punishment[PunishmentCreated];
+}
+
+public NativeSetCreated(plugin, argc) {
+	enum { arg_value = 1};
+	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
+	Punishment[PunishmentCreated] = get_param(arg_value);
+	return 1;
+}
+
 public NativeGetExpired(plugin, argc) {
-	return Punishment[PunishmentTime];
+	return Punishment[PunishmentExpired];
 }
 
 public NativeSetExpired(plugin, argc) {

@@ -6,6 +6,8 @@ APS_MENU_TIMES_TITLE=Choose punishment time
 APS_MENU_CONFIRM_TITLE=Confirm punishment
 APS_MENU_TYPE=Type
 APS_MENU_REASON=Reason
+APS_MENU_TIME=Time
+APS_MENU_FOREVER=Forever
 
 [ru]
 APS_MENU_PLAYERS_TITLE=Выберите игрока
@@ -15,3 +17,5 @@ APS_MENU_TIMES_TITLE=Выберите время наказания
 APS_MENU_CONFIRM_TITLE=Подтвердите наказание
 APS_MENU_TYPE=Тип
 APS_MENU_REASON=Причина
+APS_MENU_TIME=Время
+APS_MENU_FOREVER=Навсегда

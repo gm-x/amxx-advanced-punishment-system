@@ -35,6 +35,8 @@ native APS_GetExtra();
 native APS_SetExtra(const value);
 native APS_GetTime();
 native APS_SetTime(const value);
+native APS_GetCreated();
+native APS_SetCreated(const value);
 native APS_GetExpired();
 native APS_SetExpired(const value);
 native APS_GetReason(value[], const len);

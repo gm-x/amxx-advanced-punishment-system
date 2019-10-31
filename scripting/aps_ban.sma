@@ -1,4 +1,6 @@
 #include <amxmodx>
+#include <time>
+#include <gmx>
 #include <aps>
 #include <aps_plmenu>
 
@@ -49,10 +51,10 @@ public APS_PlayerPunished(const id, const APS_Type:type) {
 	}
 	
 	consolePrint(id);
-	RequestFrame("HandleKick", id);
+	set_task(0.3, "TaskKick", id)
 }
 
-public HandleKick(const id) {
+public TaskKick(const id) {
 	if (is_user_connected(id) || is_user_connecting(id)) {
 		server_cmd("kick #%d ^"%s^"", get_user_userid(id), "Вы были забанены! Детали в консоли или на сайте.");
 	}
@@ -270,6 +272,8 @@ consoleClear() {
 }
 
 consolePrint(const id) {
+	SetGlobalTransTarget(id);
+
 	new buffer[192], len;
 	for (new i = 0, n = ArraySize(ConsoleTokens); i < n; i++ ) {
 		arrayset(Token, 0, sizeof Token);
@@ -315,13 +319,30 @@ consolePrint(const id) {
 			}
 
 			case TokenCreated : {
-				// len += format_time(buffer[len], charsmax(buffer) - len - 1, "%m/%d/%Y %X")
+				len += format_time(buffer[len], charsmax(buffer) - len - 1, "%d/%m/%Y %H:%M:%S", APS_GetCreated() + GMX_GetServerTimeDiff());
 			}
-			case TokenTime : {}
-			case TokenLeft : {}
+			case TokenTime : {
+				if (APS_GetTime() > 0) {
+					new time[64];
+					get_time_length(id, APS_GetTime(), timeunit_seconds, time, charsmax(time));
+					len += formatex(buffer[len], charsmax(buffer) - len - 1, "%s", time);
+				} else {
+					len += formatex(buffer[len], charsmax(buffer) - len - 1, "%l", "APS_BAN_FOREVER");
+				}
+			}
+
+			case TokenLeft : {
+				if (APS_GetTime() > 0) {
+					new time[64];
+					get_time_length(id, APS_GetExpired() - get_systime()  + GMX_GetServerTimeDiff(), timeunit_seconds, time, charsmax(time));
+					len += formatex(buffer[len], charsmax(buffer) - len - 1, "%s", time);
+				} else {
+					len += formatex(buffer[len], charsmax(buffer) - len - 1, "%l", "APS_BAN_NEVER");
+				}
+			}
 
 			case TokenExpired: {
-				len += format_time(buffer[len], charsmax(buffer) - len - 1, "%d/%m/%Y %H:%M:%S", APS_GetExpired());
+				len += format_time(buffer[len], charsmax(buffer) - len - 1, "%d/%m/%Y %H:%M:%S", APS_GetExpired() + GMX_GetServerTimeDiff());
 			}
 		}
 	}
