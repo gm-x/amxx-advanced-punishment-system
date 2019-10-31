@@ -1,0 +1,9 @@
+[en]
+APS_TYPE_BAN=Ban
+APS_BAN_FOREVER=Forever
+APS_BAN_NEVER=Never
+
+[ru]
+APS_TYPE_BAN=Забанить
+APS_BAN_FOREVER=Навсегда
+APS_BAN_NEVER=Никогда

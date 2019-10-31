@@ -18,9 +18,9 @@ enum APS_Type {
 stock const APS_API_VERSION_STR[] = "0.1.0";
 
 forward APS_Initing();
-forward APP_Inited();
+forward APS_Inited();
 forward APS_PlayerPunishing(const id, const APS_Type:type);
-forward APS_PlayerPunishing(const id, const APS_Type:type);
+forward APS_PlayerPunished(const id, const APS_Type:type);
 forward APS_PlayerExonerating(const id, const APS_Type:type);
 forward APS_PlayerExonerated(const id, const APS_Type:type);
 forward APS_PlayerChecking(const id);
@@ -35,13 +35,18 @@ native APS_GetExtra();
 native APS_SetExtra(const value);
 native APS_GetTime();
 native APS_SetTime(const value);
+native APS_GetCreated();
+native APS_SetCreated(const value);
 native APS_GetExpired();
 native APS_SetExpired(const value);
 native APS_GetReason(value[], const len);
 native APS_SetReason(const value[]);
 native APS_GetDetails(value[], const len);
 native APS_SetDetails(const value[]);
-
+native APS_PunisherType:APS_GetPunisherType();
+native APS_SetPunisherType(const APS_PunisherType:value);
+native APS_GetPunisherId();
+native APS_SetPunisherId(const value);
 /*
 * This is callback from APS Core that gives major/minor versions for verifying compatibility for APS versions.
 * Do not modify this!

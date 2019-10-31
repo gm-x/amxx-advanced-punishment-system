@@ -1,17 +1,8 @@
 #include <amxmodx>
+#include <time>
+#include <gmx>
 #include <aps>
-
-#define CHECK_NATIVE_ARGS_NUM(%1,%2,%3) \
-	if (%1 < %2) { \
-		log_error(AMX_ERR_NATIVE, "Invalid num of arguments %d. Expected %d", %1, %2); \
-		return %3; \
-	}
-
-#define CHECK_NATIVE_PLAYER(%1,%2) \
-    if (!is_user_connected(%1)) { \
-        log_error(AMX_ERR_NATIVE, "Invalid player %d", %1); \
-        return %2; \
-    }
+#include <aps_plmenu>
 
 enum FWD {
 	FWD_PlayerBanKick,
@@ -23,9 +14,8 @@ new APS_Type:TypeId;
 
 public plugin_init() {
 	register_plugin("[APS] Ban", "0.1.0", "GM-X Team");
-	
+	register_dictionary("aps_ban.txt");
 	register_concmd("aps_ban", "CmdBan", ADMIN_BAN);
-
 	Forwards[FWD_PlayerBanKick] = CreateMultiForward("APS_PlayerBanKick", ET_STOP, FP_CELL);
 }
 
@@ -42,6 +32,14 @@ public APS_Initing() {
 	TypeId = APS_RegisterType("ban");
 }
 
+public APS_PlMenu_Inited() {
+	APS_PlMenu_Add("ban", "APS_TYPE_BAN");
+}
+
+public HandlePlMenuAction(const admin, const player, const reason[], const time) {
+	APS_PunishPlayer(player, TypeId, time, reason, "", admin);
+}
+
 public APS_PlayerPunished(const id, const APS_Type:type) {
 	if(type != TypeId) {
 		return;
@@ -53,10 +51,10 @@ public APS_PlayerPunished(const id, const APS_Type:type) {
 	}
 	
 	consolePrint(id);
-	RequestFrame("HandleKick", id);
+	set_task(0.3, "TaskKick", id)
 }
 
-public HandleKick(const id) {
+public TaskKick(const id) {
 	if (is_user_connected(id) || is_user_connecting(id)) {
 		server_cmd("kick #%d ^"%s^"", get_user_userid(id), "Вы были забанены! Детали в консоли или на сайте.");
 	}
@@ -274,6 +272,8 @@ consoleClear() {
 }
 
 consolePrint(const id) {
+	SetGlobalTransTarget(id);
+
 	new buffer[192], len;
 	for (new i = 0, n = ArraySize(ConsoleTokens); i < n; i++ ) {
 		arrayset(Token, 0, sizeof Token);
@@ -318,38 +318,32 @@ consolePrint(const id) {
 				len += APS_GetReason(buffer[len], charsmax(buffer) - len - 1);
 			}
 
-			case TokenCreated : {}
-			case TokenTime : {}
-			case TokenLeft : {}
+			case TokenCreated : {
+				len += format_time(buffer[len], charsmax(buffer) - len - 1, "%d/%m/%Y %H:%M:%S", APS_GetCreated() + GMX_GetServerTimeDiff());
+			}
+			case TokenTime : {
+				if (APS_GetTime() > 0) {
+					new time[64];
+					get_time_length(id, APS_GetTime(), timeunit_seconds, time, charsmax(time));
+					len += formatex(buffer[len], charsmax(buffer) - len - 1, "%s", time);
+				} else {
+					len += formatex(buffer[len], charsmax(buffer) - len - 1, "%l", "APS_BAN_FOREVER");
+				}
+			}
+
+			case TokenLeft : {
+				if (APS_GetTime() > 0) {
+					new time[64];
+					get_time_length(id, APS_GetExpired() - get_systime()  + GMX_GetServerTimeDiff(), timeunit_seconds, time, charsmax(time));
+					len += formatex(buffer[len], charsmax(buffer) - len - 1, "%s", time);
+				} else {
+					len += formatex(buffer[len], charsmax(buffer) - len - 1, "%l", "APS_BAN_NEVER");
+				}
+			}
 
 			case TokenExpired: {
-				len += format_time(buffer[len], charsmax(buffer) - len - 1, "%d/%m/%Y %H:%M:%S", APS_GetExpired());
+				len += format_time(buffer[len], charsmax(buffer) - len - 1, "%d/%m/%Y %H:%M:%S", APS_GetExpired() + GMX_GetServerTimeDiff());
 			}
 		}
 	}
-}
-
-// NATIVES
-public plugin_natives() {
-	register_native("APS_Ban", "NativeBan", 0);
-}
-
-public NativeBan(plugin, argc) {
-	CHECK_NATIVE_ARGS_NUM(argc, 4, 0)
-	enum { arg_admin = 1, arg_player, arg_time, arg_reason, arg_details };
-
-	new admin = get_param(arg_admin);
-	CHECK_NATIVE_PLAYER(admin, 0)
-
-	new player = get_param(arg_player);
-	CHECK_NATIVE_PLAYER(player, 0)
-
-	new time = get_param(arg_time);
-
-	new reason[APS_MAX_REASON_LENGTH], details[APS_MAX_DETAILS_LENGTH];
-	get_string(arg_reason, reason, charsmax(reason));
-	get_string(arg_details, details, charsmax(details));
-
-	APS_PunishPlayer(player, TypeId, time, reason, details, admin);	
-	return 1;
 }

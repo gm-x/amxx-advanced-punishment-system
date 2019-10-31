@@ -1,5 +1,6 @@
 #include <amxmodx>
-// #include <aps>
+#include <gmx>
+#include <aps>
 // #include <aps_ban>
 // #include <aps_chat>
 #include <aps_mixed>
@@ -11,18 +12,9 @@
 		for (new i = 0, buffer[192]; i < num; i++) { \
 			SetGlobalTransTarget(players[i]); \
 			vformat(buffer, charsmax(buffer), %3, %4); \
-			client_print_color(players[i], id, "% %s", "APS_LOG_PREFIX", buffer); \
+			client_print_color(players[i], id, "%l %s", "APS_LOG_PREFIX", buffer); \
 		} \
 	}
-
-enum (<<=1) {
-    APS_Chat_Voice = 1,
-    APS_Chat_Text,
-}
-
-forward APS_PlayerBanned(const admin, const id, const time, const reason[], const details[]);
-
-forward APS_PlayerBlockedChat(const admin, const id, const time, const reason[], const details[], const extra);
 
 // Show admins activity
 // 0 - disabled
@@ -42,14 +34,27 @@ enum (+=1) {
 
 new ShowActivity;
 
+new APS_Type:BanTypeID;
+
 public plugin_init() {
 	register_plugin("[APS] Mixed", "0.1.0", "GM-X Team");
+	register_dictionary("aps_log.txt");
 
 	new pcvar = get_cvar_pointer("amx_show_activity");
 	if (!pcvar) {
 		pcvar = create_cvar("amx_show_activity", "2", .has_min = true, .min_val = 0.0, .has_max = true, .max_val = 5.0);
 	}
 	bind_pcvar_num(pcvar, ShowActivity);
+}
+
+public APS_Inited() {
+	BanTypeID = APS_GetTypeIndex("ban");
+}
+
+public APS_PlayerPunished(const player, const APS_Type:type) {
+	if (type == BanTypeID) {
+		// log_amx("Ban: %N ban %N (time %d mins.) (reason ^"%s^") (details ^"%s^")", admin, id, time, reason, details);
+	}
 }
 
 /*
@@ -72,14 +77,14 @@ public APS_PlayerKicked(const admin, const player, const reason[]) {
 	log_amx("Kick: %N kick %N (reason ^"%s^")", admin, player, reason);
 	if (admin == 0) {
 		if (ShowActivity != ShowActivityDisabled) {
-			showActivityServer(player, "^1Server kick ^3%n^1. Reason: ^4%s", player, reason);
+			showActivityServer(player, "%l", "APS_LOG_KICK_SERVER", player, reason);
 		}
 	} else {
 		if (showActivityName()) {
-			showActivity(true, player, "^1Admin ^4%n ^1kick ^3%n^1. Reason: ^4%s", admin, player, reason);
+			showActivity(true, player, "%l", "APS_LOG_KICK_ADMIN", admin, player, reason);
 		}
 		if (hideActivityName()) {
-			showActivity(false, player, "^1Admin kick ^3%n^1. Reason: ^4%s", player, reason);
+			showActivity(false, player, "%l", "APS_LOG_KICK", player, reason);
 		}
 	}
 }
@@ -88,14 +93,14 @@ public APS_PlayerSlaped(const admin, const player, const damage) {
 	log_amx("Cmd: %N slap with %d damage %N", admin, damage, player);
 	if (admin == 0) {
 		if (ShowActivity != ShowActivityDisabled) {
-			showActivityServer(player, "^1Server slap ^3%n ^1with ^4%d ^1damage", player, damage);
+			showActivityServer(player, "%l", "APS_LOG_SLAP_SERVER", player, damage);
 		}
 	} else {
 		if (showActivityName()) {
-			showActivity(true, player, "^1Admin ^4%n ^1slap ^3%n ^1with ^4%d ^1damage", admin, player, damage);
+			showActivity(true, player, "%l", "APS_LOG_SLAP_ADMIN", admin, player, damage);
 		}
 		if (hideActivityName()) {
-			showActivity(false, player, "^1Admin slap ^3%n ^1with ^4%d ^1damage", player, damage);
+			showActivity(false, player, "%l", "APS_LOG_SLAP", player, damage);
 		}
 	}
 }
@@ -104,14 +109,14 @@ public APS_PlayerSlayed(const admin, const player) {
 	log_amx("Cmd: %N slay %N", admin, player);
 	if (admin == 0) {
 		if (ShowActivity != ShowActivityDisabled) {
-			showActivityServer(player, "^1Server kill ^3%n", player);
+			showActivityServer(player, "%l", "APS_LOG_SLAY_SERVER", player);
 		}
 	} else {
 		if (showActivityName()) {
-			showActivity(true, player, "^1Admin ^4%n ^1kill ^3%n", admin, player);
+			showActivity(true, player, "%l", "APS_LOG_SLAY_ADMIN", admin, player);
 		}
 		if (hideActivityName()) {
-			showActivity(false, player, "^1Admin kill ^3%n", player);
+			showActivity(false, player, "%l", "APS_LOG_SLAY", player);
 		}
 	}
 }

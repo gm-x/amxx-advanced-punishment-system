@@ -1,22 +1,37 @@
+#pragma semicolon 1
+
 #include <amxmodx>
+#include <time>
 #include <reapi>
 #include <grip>
 #include <gmx>
+#include <aps>
 #include <aps_mixed>
 
+#define destroy_handler(%1) if (Item[%1] > Handler_Invaild) DestroyForward(Item[%1])
 #define clear_item() arrayset(Item, 0 , sizeof Item)
 #define clear_reason() arrayset(Reason, 0 , sizeof Reason)
+#define get_item(%1) clear_item(); \
+	ArrayGetArray(Items, %1, Item, sizeof Item)
+#define get_reason(%1) clear_reason(); \
+	ArrayGetArray(Reasons, %1, Reason, sizeof Reason)
 
-#define CHECK_NATIVE_ARGS_NUM(%1,%2,%3) \
-	if (%1 < %2) { \
-		log_error(AMX_ERR_NATIVE, "Invalid num of arguments %d. Expected %d", %1, %2); \
-		return %3; \
-	}
+#define show_item_step(%1,%2,%3,%4) \
+	if (Item[%2] == Handler_Default) { \
+		%3(%1); \
+		return; \
+	} else if (Item[%2] != Handler_Invaild) { \
+		callHandler(%1, %2); \
+		return; \
+	} else \
+		Players[%1][PlayerStep]+=%4
 
-const MAX_ITEM_TITLE_LENGTH = 64;
+
+const MAX_TYPE_TITLE_LENGTH = 64;
 const MAX_REASON_TITLE_LENGTH = 64;
 
 #define MENU_TAB "^t^t"
+#define DEBUG
 // #define HIDE_ME_IN_MENU
 
 new TeamNames[][] = {
@@ -26,40 +41,60 @@ new TeamNames[][] = {
 	"SPEC"
 };
 
-enum _:ItemStruc {
-	ItemPluginID,
-	ItemFuncID,
-	bool:ItemReason,
-	bool:ItemTime,
-	ItemTitle[MAX_ITEM_TITLE_LENGTH]
+const Handler_Default = -2;
+const Handler_Invaild = -1;
+
+enum {
+	Step_Item,
+	Step_Reason,
+	Step_Time,
+	Step_Extra,
+	Step_Confirm,
 };
 
-enum _:ReasonStruc {
+enum item_s {
+	APS_Type:ItemType,
+	ItemTitle[32],
+	ItemHandler,
+	ItemResonHandler,
+	ItemTimeHandler,
+	ItemExtraHandler,
+	bool:ItemNeedConfirm
+};
+
+enum _:reason_s {
 	ReasonTime,
 	ReasonTitle[MAX_REASON_TITLE_LENGTH]
 };
 
-enum _:PlayerMenu {
-	PlayerMenuName[MAX_NAME_LENGTH],
-	PlayerMenuTarget,
-	PlayerMenuTargetIndex,
-	PlayerMenuPage,
-	PlayerMenuType,
-	PlayerMenuReason,
-	PlayerMenuTime,
-	PlayerMenuExtra,
-	PlayerMenuNum,
-	PlayerMenuList[MAX_PLAYERS],
-	PlayerMenuIds[MAX_PLAYERS],
+enum _:player_s {
+	PlayerName[MAX_NAME_LENGTH],
+	PlayerTarget,
+	PlayerTargetIndex,
+	PlayerTargetID,
+	PlayerPage,
+	PlayerStep,
+	PlayerItem,
+	PlayerReason,
+	PlayerTime,
+	PlayerExtra,
+	PlayerNum,
+	PlayerList[MAX_PLAYERS],
+	PlayerIds[MAX_PLAYERS],
 };
 
-new Array:Items, ItemsNum, Item[ItemStruc];
-new Array:Reasons, ReasonsNum, Reason[ReasonStruc];
+new FwReturn;
+new Array:Items, Item[item_s];
+new Array:Reasons, Reason[reason_s];
 new Array:Times, TimesNum;
-new PlayersMenu[MAX_PLAYERS + 1][PlayerMenu];
+new Players[MAX_PLAYERS + 1][player_s];
 
 public plugin_init() {
 	register_plugin("[APS] Players Menu", "0.1.0", "GM-X Team");
+
+	register_dictionary("aps_plmenu.txt");
+	register_dictionary("common.txt");
+	register_dictionary("time.txt");
 
 	RegisterHookChain(RG_CBasePlayer_SetClientUserInfoName, "CBasePlayer_SetClientUserInfoName_Post", true);
 
@@ -69,23 +104,48 @@ public plugin_init() {
 	register_menucmd(register_menuid("APS_TYPES_MENU"), 1023, "HandleTypesMenu");
 	register_menucmd(register_menuid("APS_REASONS_MENU"), 1023, "HandleReasonsMenu");
 	register_menucmd(register_menuid("APS_TIMES_MENU"), 1023, "HandleTimesMenu");
+	register_menucmd(register_menuid("APS_CONFIRM_MENU"), 1023, "HandleConfirmMenu");
 
-	Items = ArrayCreate(ItemStruc, 0);
-	Reasons = ArrayCreate(ReasonStruc, 0);
+	Items = ArrayCreate(item_s, 0);
+	Reasons = ArrayCreate(reason_s, 0);
 	Times = ArrayCreate(1, 0);
+
+	parseTimes("1i 1d 1w 1m 1y");
+	hook_cvar_change(create_cvar(
+		"aps_plmenu_times",
+		"1i 1d 1w 1m 1y"
+	), "HooCvarTimes");
 }
 
 public plugin_cfg() {
 	ArrayPushCell(Times, 60);
 	ArrayPushCell(Times, 120);
 	TimesNum = ArraySize(Times);
+
+
+	new fwdInited = CreateMultiForward("APS_PlMenu_Inited", ET_IGNORE);
+	ExecuteForward(fwdInited, FwReturn);
+	DestroyForward(fwdInited);
 }
 
 public plugin_end() {
-	ArrayDestroy(Items);
+	for (new i = 0, n = ArraySize(Items); i < n; i++) {
+		ArrayGetArray(Items, i, Item, sizeof Item);
+		destroy_handler(ItemHandler);
+		destroy_handler(ItemResonHandler);
+		destroy_handler(ItemTimeHandler);
+		destroy_handler(ItemExtraHandler);
+	}
+
 	ArrayDestroy(Reasons);
 	ArrayDestroy(Times);
 }
+
+public HooCvarTimes(const pcvar, const oldValue[], const newValue[]) {
+	parseTimes(newValue);
+}
+
+public APS_PlMenu_Main() {}
 
 public GMX_Init() {
 	// TODO: Cache reasons
@@ -113,17 +173,15 @@ public OnReasonsResponse(const GmxResponseStatus:status, const GripJSONValue:dat
 		grip_destroy_json_value(element);
 	}
 	grip_destroy_json_value(reasons);
-
-	ReasonsNum = ArraySize(Reasons);
 }
 
 public client_putinserver(id) {
-	get_user_name(id, PlayersMenu[id][PlayerMenuName], MAX_NAME_LENGTH - 1);
+	get_user_name(id, Players[id][PlayerName], MAX_NAME_LENGTH - 1);
 }
 
 public CBasePlayer_SetClientUserInfoName_Post(const id, const infobuffer[], const name[]) {
-	if (strcmp(name, PlayersMenu[id][PlayerMenuName]) != 0) {
-		copy(PlayersMenu[id][PlayerMenuName], MAX_NAME_LENGTH - 1, name);
+	if (strcmp(name, Players[id][PlayerName]) != 0) {
+		copy(Players[id][PlayerName], MAX_NAME_LENGTH - 1, name);
 	}
 }
 
@@ -132,12 +190,56 @@ public CmdPlayersMenu(const id) {
 	return PLUGIN_HANDLED;
 }
 
+public APS_PlMenu_Add(const type[], const title[], const handler, const resonHandler, const timeHandler, const extraHandler, const bool:needConfirm) {
+	clear_item();
+
+	new APS_Type:typeId = APS_GetTypeIndex(type);
+	Item[ItemType] = typeId;
+	copy(Item[ItemTitle], charsmax(Item[ItemTitle]), title);
+	Item[ItemHandler] = handler != Handler_Invaild ? handler : Handler_Default;
+	Item[ItemResonHandler] = resonHandler;
+	Item[ItemTimeHandler] = timeHandler;
+	Item[ItemExtraHandler] = extraHandler != Handler_Default ? extraHandler : Handler_Invaild;
+	Item[ItemNeedConfirm] = needConfirm;
+	return ArrayPushArray(Items, Item, sizeof Item);
+}
+
+public APS_PlMenu_NextStep(const id, const value) {
+	if (!is_user_connected(id)) {
+		return;
+	}
+
+	switch (Players[id][PlayerStep]) {
+		case Step_Reason: {
+			Players[id][PlayerReason] = value;
+		}
+
+		case Step_Time: {
+			Players[id][PlayerTime] = value;
+		}
+
+		case Step_Extra: {
+			Players[id][PlayerExtra] = value;
+		}
+	}
+
+	nextStep(id);
+}
+
+public APS_PlMenu_PrevStep(const id) {
+	if (!is_user_connected(id)) {
+		return;
+	}
+
+	prevStep(id);
+}
+
 displayMenu(const id) {
-	clearPlayerMenu(id);
+	clearPlayer(id);
 	findPlayersForMenu(id, TEAM_TERRORIST);
 	findPlayersForMenu(id, TEAM_CT);
 	findPlayersForMenu(id, TEAM_SPECTATOR);
-	if (PlayersMenu[id][PlayerMenuNum] > 0) {
+	if (Players[id][PlayerNum] > 0) {
 		showPlayersMenu(id);
 	}
 }
@@ -148,16 +250,16 @@ showPlayersMenu(const id, const page = 0) {
 	}
 
 	new start, end;
-	PlayersMenu[id][PlayerMenuPage] = getMenuPage(page, PlayersMenu[id][PlayerMenuNum], 8, start, end);
-	new pages = getMenuPagesNum(PlayersMenu[id][PlayerMenuNum], 8);
-	new bool:firstPage = bool:(PlayersMenu[id][PlayerMenuPage] == 0);
+	Players[id][PlayerPage] = getMenuPage(page, Players[id][PlayerNum], 8, start, end);
+	new pages = getMenuPagesNum(Players[id][PlayerNum], 8);
+	new bool:firstPage = bool:(Players[id][PlayerPage] == 0);
 
 	new menu[MAX_MENU_LENGTH];
-	new len = formatex(menu, charsmax(menu), "%s\r%l^t\d%d/%d^n^n", MENU_TAB, "APS_PLMENU_TITLE", PlayersMenu[id][PlayerMenuPage] + 1, pages + 1);
+	new len = formatex(menu, charsmax(menu), "%s\r%l^t\d%d/%d^n^n", MENU_TAB, "APS_MENU_PLAYERS_TITLE", Players[id][PlayerPage] + 1, pages + 1);
 
 	new keys = MENU_KEY_0;
 	for (new i = start, player, team, item; i < end; i++) {
-		player = PlayersMenu[id][PlayerMenuList][i];
+		player = Players[id][PlayerList][i];
 
 		if (!is_user_connected(player)) {
 			continue;
@@ -185,54 +287,56 @@ showPlayersMenu(const id, const page = 0) {
 //             }
 		}
 
-		len += formatex(menu[len], charsmax(menu) - len, " \w%s^n", PlayersMenu[player][PlayerMenuName]);
+		len += formatex(menu[len], charsmax(menu) - len, " \w%s^n", Players[player][PlayerName]);
 	}
 
 	new tmp[15];
 	setc(tmp, 8 - (end - start), '^n');
 	len += copy(menu[len], charsmax(menu) - len, tmp);
 
-	if (end < PlayersMenu[id][PlayerMenuNum]) {
+	if (end < Players[id][PlayerNum]) {
 		keys |= MENU_KEY_9;
-		len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[9] \w%L^n%s\r[0] \w%L", MENU_TAB, id, "MORE", MENU_TAB, id, (firstPage ? "EXIT" : "BACK"));
+		len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[9] \w%l^n%s\r[0] \w%l", MENU_TAB, "MORE", MENU_TAB, (firstPage ? "EXIT" : "BACK"));
 	} else {
-		len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%L", MENU_TAB, id, (firstPage ? "EXIT" : "BACK"));
+		len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%l", MENU_TAB, (firstPage ? "EXIT" : "BACK"));
 	}
 
 	show_menu(id, keys, menu, -1, "APS_PLAYERS_MENU");
 }
 
-showTypesMenu(const id, const page = 0) {
+showItemsMenu(const id, const page = 0) {
 	if (page < 0) {
 		displayMenu(id);
 		return;
 	}
 
+	SetGlobalTransTarget(id);
+
+	new num = ArraySize(Items);
+
 	new start, end;
-	PlayersMenu[id][PlayerMenuPage] = getMenuPage(page, ItemsNum, 8, start, end);
-	new pages = getMenuPagesNum(ItemsNum, 8);
-	new bool:firstPage = bool:(PlayersMenu[id][PlayerMenuPage] == 0);
+	Players[id][PlayerPage] = getMenuPage(page, num, 8, start, end);
+	new pages = getMenuPagesNum(num, 8);
 
 	new menu[MAX_MENU_LENGTH];
-	new len = formatex(menu, charsmax(menu), "%s\r%l^t\d%d/%d^n^n", MENU_TAB, "STB_MENU_TITLE", PlayersMenu[id][PlayerMenuPage] + 1, pages + 1);
+	new len = formatex(menu, charsmax(menu), "%s\r%l^t\d%d/%d^n^n", MENU_TAB, "APS_MENU_TYPES_TITLE", Players[id][PlayerPage] + 1, pages + 1);
 
 	new keys = MENU_KEY_0;
 	for (new i = start, item; i < end; i++) {
-		clear_item();
-		ArrayGetArray(Items, i, Item, sizeof Item);
+		get_item(i);
 		keys |= (1 << item);
-		len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \w%s^n", MENU_TAB, ++item, Item[ItemTitle]);
+		len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \w%l^n", MENU_TAB, ++item, Item[ItemTitle]);
 	}
 
 	new tmp[15];
 	setc(tmp, 8 - (end - start), '^n');
 	len += copy(menu[len], charsmax(menu) - len, tmp);
 
-	if (end < PlayersMenu[id][PlayerMenuNum]) {
+	if (end < num) {
 		keys |= MENU_KEY_9;
-		len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[9] \w%L^n%s\r[0] \w%L", MENU_TAB, id, "MORE", MENU_TAB, id, (firstPage ? "EXIT" : "BACK"));
+		len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[9] \w%l^n%s\r[0] \w%l", MENU_TAB, "MORE", MENU_TAB, "BACK");
 	} else {
-		len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%L", MENU_TAB, id, (firstPage ? "EXIT" : "BACK"));
+		len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%l", MENU_TAB, "BACK");
 	}
 
 	show_menu(id, keys, menu, -1, "APS_TYPES_MENU");
@@ -240,22 +344,24 @@ showTypesMenu(const id, const page = 0) {
 
 showReasonsMenu(const id, const page = 0) {
 	if (page < 0) {
-		showTypesMenu(id);
+		prevStep(id);
 		return;
 	}
 
+	SetGlobalTransTarget(id);
+
+	new num = ArraySize(Reasons);
+
 	new start, end;
-	PlayersMenu[id][PlayerMenuPage] = getMenuPage(page, ReasonsNum, 8, start, end);
-	new pages = getMenuPagesNum(ReasonsNum, 8);
-	new bool:firstPage = bool:(PlayersMenu[id][PlayerMenuPage] == 0);
+	Players[id][PlayerPage] = getMenuPage(page, num, 8, start, end);
+	new pages = getMenuPagesNum(num, 8);
 
 	new menu[MAX_MENU_LENGTH];
-	new len = formatex(menu, charsmax(menu), "%s\r%l^t\d%d/%d^n^n", MENU_TAB, "STB_MENU_TITLE", PlayersMenu[id][PlayerMenuPage] + 1, pages + 1);
+	new len = formatex(menu, charsmax(menu), "%s\r%l^t\d%d/%d^n^n", MENU_TAB, "APS_MENU_REASONS_TITLE", Players[id][PlayerPage] + 1, pages + 1);
 
 	new keys = MENU_KEY_0;
 	for (new i = start, item; i < end; i++) {
-		clear_reason();
-		ArrayGetArray(Reasons, i, Reason, sizeof Reason);
+		get_reason(i);
 		keys |= (1 << item);
 		len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \w%s^n", MENU_TAB, ++item, Reason[ReasonTitle]);
 	}
@@ -264,11 +370,11 @@ showReasonsMenu(const id, const page = 0) {
 	setc(tmp, 8 - (end - start), '^n');
 	len += copy(menu[len], charsmax(menu) - len, tmp);
 
-	if (end < PlayersMenu[id][PlayerMenuNum]) {
+	if (end < num) {
 		keys |= MENU_KEY_9;
-		len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[9] \w%L^n%s\r[0] \w%L", MENU_TAB, id, "MORE", MENU_TAB, id, (firstPage ? "EXIT" : "BACK"));
+		len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[9] \w%l^n%s\r[0] \w%l", MENU_TAB, "MORE", MENU_TAB, "BACK");
 	} else {
-		len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%L", MENU_TAB, id, (firstPage ? "EXIT" : "BACK"));
+		len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%l", MENU_TAB, "BACK");
 	}
 
 	show_menu(id, keys, menu, -1, "APS_REASONS_MENU");
@@ -276,56 +382,92 @@ showReasonsMenu(const id, const page = 0) {
 
 showTimesMenu(const id, const page = 0) {
 	if (page < 0) {
-		showReasonsMenu(id);
+		prevStep(id);
 		return;
 	}
 
+	SetGlobalTransTarget(id);
+
 	new start, end;
-	PlayersMenu[id][PlayerMenuPage] = getMenuPage(page, TimesNum, 8, start, end);
+	Players[id][PlayerPage] = getMenuPage(page, TimesNum, 8, start, end);
 	new pages = getMenuPagesNum(TimesNum, 8);
-	new bool:firstPage = bool:(PlayersMenu[id][PlayerMenuPage] == 0);
 
 	new menu[MAX_MENU_LENGTH];
-	new len = formatex(menu, charsmax(menu), "%s\r%l^t\d%d/%d^n^n", MENU_TAB, "STB_MENU_TITLE", PlayersMenu[id][PlayerMenuPage] + 1, pages + 1);
+	new len = formatex(menu, charsmax(menu), "%s\r%l^t\d%d/%d^n^n", MENU_TAB, "APS_MENU_TIMES_TITLE", Players[id][PlayerPage] + 1, pages + 1);
 
 	new keys = MENU_KEY_0;
-	for (new i = start, item, time; i < end; i++) {
+	for (new i = start, item, time, title[64]; i < end; i++) {
 		time = ArrayGetCell(Times, i);
 		keys |= (1 << item);
-		len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \w%d^n", MENU_TAB, ++item, time);
+
+		get_time_length(id, time, timeunit_seconds, title, charsmax(title));
+		len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \w%s^n", MENU_TAB, ++item, title);
 	}
 
 	new tmp[15];
 	setc(tmp, 8 - (end - start), '^n');
 	len += copy(menu[len], charsmax(menu) - len, tmp);
 
-	if (end < PlayersMenu[id][PlayerMenuNum]) {
+	if (end < TimesNum) {
 		keys |= MENU_KEY_9;
-		len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[9] \w%L^n%s\r[0] \w%L", MENU_TAB, id, "MORE", MENU_TAB, id, (firstPage ? "EXIT" : "BACK"));
+		len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[9] \w%l^n%s\r[0] \w%l", MENU_TAB, "MORE", MENU_TAB, "BACK");
 	} else {
-		len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%L", MENU_TAB, id, (firstPage ? "EXIT" : "BACK"));
+		len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%l", MENU_TAB, "BACK");
 	}
 
 	show_menu(id, keys, menu, -1, "APS_TIMES_MENU");
 }
 
+showExtraMenu(const id) {
+	#pragma unused id
+}
+#pragma unused showExtraMenu
+
+showConfirmMenu(const id) {
+	SetGlobalTransTarget(id);
+
+	new menu[MAX_MENU_LENGTH];
+	new len = formatex(menu, charsmax(menu), "%s\r%l^n^n", MENU_TAB, "APS_MENU_CONFIRM_TITLE");
+
+	get_item(Players[id][PlayerItem]);
+	len += formatex(menu[len], charsmax(menu) - len, "%s\y%l\w: \y%l^n", MENU_TAB, "APS_MENU_TYPE", Item[ItemTitle]);
+	if (Players[id][PlayerReason] >= 0) {
+		get_reason(Players[id][PlayerReason]);
+		len += formatex(menu[len], charsmax(menu) - len, "%s\y%l\w: \y%s^n", MENU_TAB, "APS_MENU_REASON", Reason[ReasonTitle]);
+	}
+
+	if (Players[id][PlayerTime] >= 0) {
+		new time[64];
+		get_time_length(id, Players[id][PlayerTime], timeunit_seconds, time, charsmax(time));
+		len += formatex(menu[len], charsmax(menu) - len, "%s\y%l\w: \y%s^n", MENU_TAB, "APS_MENU_TIME", time);
+	} else {
+		len += formatex(menu[len], charsmax(menu) - len, "%s\y%l\w: \r%l^n", MENU_TAB, "APS_MENU_TIME", "APS_MENU_FOREVER");
+	}
+
+	new keys = MENU_KEY_1 | MENU_KEY_2;
+	len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[1] \w%l^n%s\r[2] \w%l", MENU_TAB, "YES", MENU_TAB, "NO");
+
+	show_menu(id, keys, menu, -1, "APS_CONFIRM_MENU");
+}
+
 public HandlePlayersMenu(const id, const key) {
 	switch (key) {
 		case 8: {
-			showPlayersMenu(id, ++PlayersMenu[id][PlayerMenuPage]);
+			showPlayersMenu(id, ++Players[id][PlayerPage]);
 		}
 
 		case 9: {
-			showPlayersMenu(id, --PlayersMenu[id][PlayerMenuPage]);
+			showPlayersMenu(id, --Players[id][PlayerPage]);
 		}
 
 		default: {
-			new index = (PlayersMenu[id][PlayerMenuPage] * 8) + key;
-			new player = PlayersMenu[id][PlayerMenuList][index];
-			if (is_user_connected(player) && get_user_userid(player) == PlayersMenu[id][PlayerMenuIds][index]) {
-				PlayersMenu[id][PlayerMenuTarget] = player;
-				PlayersMenu[id][PlayerMenuTargetIndex] = get_user_userid(player);
-				showTypesMenu(id);
+			new index = (Players[id][PlayerPage] * 8) + key;
+			new player = Players[id][PlayerList][index];
+			if (is_user_connected(player) && get_user_userid(player) == Players[id][PlayerIds][index]) {
+				Players[id][PlayerTarget] = player;
+				Players[id][PlayerTargetIndex] = get_user_userid(player);
+				Players[id][PlayerTargetID] = GMX_PlayerGetPlayerId(player);
+				showItemsMenu(id);
 			}
 		}
 	}
@@ -339,16 +481,16 @@ public HandleTypesMenu(const id, const key) {
 
 	switch (key) {
 		case 8: {
-			showTypesMenu(id, ++PlayersMenu[id][PlayerMenuPage]);
+			showItemsMenu(id, ++Players[id][PlayerPage]);
 		}
 
 		case 9: {
-			showTypesMenu(id, --PlayersMenu[id][PlayerMenuPage]);
+			showItemsMenu(id, --Players[id][PlayerPage]);
 		}
 
 		default: {
-			PlayersMenu[id][PlayerMenuType] = (PlayersMenu[id][PlayerMenuPage] * 8) + key;
-			makeAction(id);
+			Players[id][PlayerItem] = (Players[id][PlayerPage] * 8) + key;
+			nextStep(id);
 		}
 	}
 }
@@ -361,22 +503,20 @@ public HandleReasonsMenu(const id, const key) {
 
 	switch (key) {
 		case 8: {
-			showReasonsMenu(id, ++PlayersMenu[id][PlayerMenuPage]);
+			showReasonsMenu(id, ++Players[id][PlayerPage]);
 		}
 
 		case 9: {
-			showReasonsMenu(id, --PlayersMenu[id][PlayerMenuPage]);
+			showReasonsMenu(id, --Players[id][PlayerPage]);
 		}
 
 		default: {
-			PlayersMenu[id][PlayerMenuReason] = (PlayersMenu[id][PlayerMenuPage] * 8) + key;
-
-			clear_reason();
-			ArrayGetArray(Reasons, PlayersMenu[id][PlayerMenuReason], Reason, sizeof Reason);
+			Players[id][PlayerReason] = (Players[id][PlayerPage] * 8) + key;
+			get_reason(Players[id][PlayerReason]);
 			if (Reason[ReasonTime] >= 0) {
-				PlayersMenu[id][PlayerMenuReason] = Reason[ReasonTime];
+				Players[id][PlayerReason] = Reason[ReasonTime];
 			}
-			makeAction(id);
+			nextStep(id);
 		}
 	}
 }
@@ -389,59 +529,108 @@ public HandleTimesMenu(const id, const key) {
 
 	switch (key) {
 		case 8: {
-			showTimesMenu(id, ++PlayersMenu[id][PlayerMenuPage]);
+			showTimesMenu(id, ++Players[id][PlayerPage]);
 		}
 
 		case 9: {
-			showTimesMenu(id, --PlayersMenu[id][PlayerMenuPage]);
+			showTimesMenu(id, --Players[id][PlayerPage]);
 		}
 
 		default: {
-			PlayersMenu[id][PlayerMenuTime] = (PlayersMenu[id][PlayerMenuPage] * 8) + key;
-			makeAction(id);
+			new item = (Players[id][PlayerPage] * 8) + key;
+			if (0 <= item < TimesNum) {
+				Players[id][PlayerTime] = ArrayGetCell(Times, item);
+			}
+			nextStep(id);
 		}
 	}
+}
+
+public HandleConfirmMenu(const id, const key) {
+	if (!isTargetValid(id)) {
+		displayMenu(id);
+		return;
+	}
+
+	if (key != 0) {
+		prevStep(id);
+		return;
+	}
+
+	get_item(Players[id][PlayerItem]);
+	makeAction(id);
+}
+
+nextStep(const id) {
+	Players[id][PlayerStep]++;
+	if (Players[id][PlayerStep] <= Step_Item) {
+		showItemsMenu(id);
+		return;
+	}
+
+	get_item(Players[id][PlayerItem]);
+	if (Players[id][PlayerStep] == Step_Reason) {
+		show_item_step(id, ItemResonHandler, showReasonsMenu, 1);
+	}
+
+	if (Players[id][PlayerStep] == Step_Time) {
+		show_item_step(id, ItemTimeHandler, showTimesMenu, 1);
+	}
+
+	if (Players[id][PlayerStep] == Step_Extra) {
+		show_item_step(id, ItemExtraHandler, showExtraMenu, 1);
+	}
+
+	if (Item[ItemNeedConfirm]) {
+		showConfirmMenu(id);
+	} else {
+		makeAction(id);
+	}
+}
+
+prevStep(const id) {
+	Players[id][PlayerStep]--;
+	if (Players[id][PlayerStep] <= Step_Item) {
+		showItemsMenu(id);
+		return;
+	}
+
+	get_item(Players[id][PlayerItem]);
+	if (Players[id][PlayerStep] == Step_Extra) {
+		show_item_step(id, ItemExtraHandler, showExtraMenu, 1);
+	}
+
+	if (Players[id][PlayerStep] == Step_Time) {
+		show_item_step(id, ItemTimeHandler, showTimesMenu, 1);
+	}
+
+	if (Players[id][PlayerStep] == Step_Reason) {
+		show_item_step(id, ItemResonHandler, showReasonsMenu, 1);
+	}
+
+	showItemsMenu(id);
 }
 
 makeAction(const id) {
-	ArrayGetArray(Items, PlayersMenu[id][PlayerMenuType], Item, sizeof Item);
-	if (canShowReason(id)) {
-		showReasonsMenu(id);
-	} else if (canShowTime(id)) {
-		showTimesMenu(id);
-	} else if (callfunc_begin_i(Item[ItemFuncID], Item[ItemPluginID]) == 1) {
-		callfunc_push_int(id);
-		callfunc_push_int(PlayersMenu[id][PlayerMenuTarget]);
-		if (PlayersMenu[id][PlayerMenuReason] >= 0) {
-			clear_reason();
-			ArrayGetArray(Reasons, PlayersMenu[id][PlayerMenuReason], Reason, sizeof Reason);
-			callfunc_push_str(Reason[ReasonTitle]);
-		} else {
-			callfunc_push_str("");
-		}
-		callfunc_push_int(PlayersMenu[id][PlayerMenuTime]);
-		callfunc_end();
+	if (0 <= Players[id][PlayerReason] < ArraySize(Reasons)) {
+		get_reason(Players[id][PlayerReason]);
+	}
+	if (Item[ItemHandler] != Handler_Default) {
+		ExecuteForward(Item[ItemHandler], FwReturn, id, Players[id][PlayerTarget], Reason[ReasonTitle], Players[id][PlayerTime], Players[id][PlayerExtra]);
+	} else if (Item[ItemType] != APS_InvalidType) {
+		APS_PunishPlayer(Players[id][PlayerTarget], Item[ItemType], Players[id][PlayerTime], Reason[ReasonTitle], "", id, Players[id][PlayerExtra]);
 	}
 }
 
-bool:canShowReason(const id) {
-	if (!Item[ItemReason] || ReasonsNum == 0) {
-		return false;
+callHandler(const id, const item_s:handler) {
+	if (0 <= Players[id][PlayerReason] < ArraySize(Reasons)) {
+		get_reason(Players[id][PlayerReason]);
 	}
-
-	return bool:(PlayersMenu[id][PlayerMenuReason] == -1);
-}
-
-bool:canShowTime(const id) {
-	if (!Item[ItemTime]) {
-		return false;
-	}
-
-	return bool:(PlayersMenu[id][PlayerMenuTime] == -1);
+	ExecuteForward(Item[handler], FwReturn, id, Players[id][PlayerTarget], Reason[ReasonTitle], Players[id][PlayerTime], Players[id][PlayerExtra]);
 }
 
 findPlayersForMenu(const id, const TeamName:team) {
-	new num = PlayersMenu[id][PlayerMenuNum];
+	new num = Players[id][PlayerNum];
 	for (new player = 1; player <= MaxClients; player++) {
 		if (!is_user_connected(player) || TeamName:get_member(player, m_iTeam) != team) {
 			continue;
@@ -453,28 +642,30 @@ findPlayersForMenu(const id, const TeamName:team) {
 		}
 #endif
 
-		PlayersMenu[id][PlayerMenuList][num] = player;
-		PlayersMenu[id][PlayerMenuIds][num] = get_user_userid(player);
+		Players[id][PlayerList][num] = player;
+		Players[id][PlayerIds][num] = get_user_userid(player);
 		num++;
 	}
 
-	PlayersMenu[id][PlayerMenuNum] = num;
+	Players[id][PlayerNum] = num;
 }
 
 bool:isTargetValid(const id) {
-	new player = PlayersMenu[id][PlayerMenuTarget];
-	return bool:(player != 0 && is_user_connected(player) && get_user_userid(player) == PlayersMenu[id][PlayerMenuTargetIndex]);
+	new player = Players[id][PlayerTarget];
+	return bool:(player != 0 && is_user_connected(player) && get_user_userid(player) == Players[id][PlayerTargetIndex]);
 }
 
-clearPlayerMenu(const id) {
-	PlayersMenu[id][PlayerMenuTarget] = 0;
-	PlayersMenu[id][PlayerMenuTargetIndex] = 0;
-	PlayersMenu[id][PlayerMenuPage] = 0;
-	PlayersMenu[id][PlayerMenuNum] = 0;
-	PlayersMenu[id][PlayerMenuType] = -1;
-	PlayersMenu[id][PlayerMenuReason] = -1;
-	PlayersMenu[id][PlayerMenuTime] = -1;
-	PlayersMenu[id][PlayerMenuExtra] = 0;
+clearPlayer(const id) {
+	Players[id][PlayerTarget] = 0;
+	Players[id][PlayerTargetIndex] = 0;
+	Players[id][PlayerTargetID] = 0;
+	Players[id][PlayerPage] = 0;
+	Players[id][PlayerNum] = 0;
+	Players[id][PlayerStep] = Step_Item;
+	Players[id][PlayerItem] = -1;
+	Players[id][PlayerReason] = -1;
+	Players[id][PlayerTime] = -1;
+	Players[id][PlayerExtra] = 0;
 }
 
 getMenuPage(cur_page, elements_num, per_page, &start, &end) {
@@ -488,47 +679,60 @@ getMenuPagesNum(elements_num, per_page) {
 	return (elements_num - 1) / per_page;
 }
 
-// NATIVES
-public plugin_natives() {
-	register_native("APS_PlMenu_PushItem", "NativePushItem", 0);
-}
+stock parseTimes(const value[]) {
+	ArrayClear(Times);
+	new i, t, k;
+	while (value[i] != EOS) {
+		switch (value[i]) {
+			case '0'..'9': {
+				t = (t * 10) + (value[i] - '0');
+			}
 
-public NativePushItem(plugin, argc) {
-	CHECK_NATIVE_ARGS_NUM(argc, 2, 0)
-	enum { arg_title = 1, arg_func, arg_reason, arg_time };
+			case 'i': {
+				k += t * 60;
+				t = 0;
+			}
 
-	clear_item();
+			case 'h': {
+				k += t * 3600;
+				t = 0;
+			}
 
-	Item[ItemPluginID] = plugin;
+			case 'd': {
+				k += t * 86400;
+				t = 0;
+			}
 
-	get_string(arg_title, Item[ItemTitle], charsmax(Item[ItemTitle]));
+			case 'w': {
+				k += t * 604800;
+				t = 0;
+			}
 
-	new func[64];
-	get_string(arg_func, func, charsmax(func));
-	if (func[0] == EOS) {
-		log_error(AMX_ERR_NATIVE, "Could not find function %s", func);
-		return 0;
+			case 'm': {
+				k += t * 2592000;
+				t = 0;
+			}
+
+			case 'y': {
+				k += t * 31104000;
+				t = 0;
+			}
+
+			case ' ': {
+				if (k + t > 0) {
+					ArrayPushCell(Times, k + t);
+				}
+				t = 0;
+				k = 0;
+			}
+		}
+
+		i++;
 	}
 
-	Item[ItemFuncID] = get_func_id(func, plugin);
-	if (Item[ItemFuncID] == -1) {
-		log_error(AMX_ERR_NATIVE, "Could not find function %s", func);
-		return -1;
+	if (i > 0) {
+		ArrayPushCell(Times, k + t);
 	}
 
-	if (argc >= arg_reason) {
-		Item[ItemReason] = bool:get_param(arg_reason);
-	} else {
-		Item[ItemReason] = false;
-	}
-
-	if (argc >= arg_time) {
-		Item[ItemTime] = bool:get_param(arg_time);
-	} else {
-		Item[ItemTime] = false;
-	}
-
-	ArrayPushArray(Items, Item, sizeof Item);
-	ItemsNum = ArraySize(Items);
-	return 1;
+	TimesNum = ArraySize(Times);
 }

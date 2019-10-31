@@ -41,6 +41,7 @@ enum _:PunishmentStruc {
 	PunishmentID,
 	PunishmentType,
 	PunishmentExtra,
+	PunishmentCreated,
 	PunishmentTime,
 	PunishmentExpired,
 	PunishmentReason[APS_MAX_TYPE_LENGTH],
@@ -72,7 +73,7 @@ public plugin_init() {
 
 public plugin_cfg() {
 	new fwdIniting = CreateMultiForward("APS_Initing", ET_IGNORE);
-	new fwdInited = CreateMultiForward("APP_Inited", ET_IGNORE);
+	new fwdInited = CreateMultiForward("APS_Inited", ET_IGNORE);
 
 	ExecuteForward(fwdIniting, FwdReturn);
 	TypesNum = ArraySize(Types);
@@ -209,6 +210,8 @@ parsePunishment(const GripJSONValue:punishment) {
 	Punishment[PunishmentExtra] = grip_json_get_type(tmp) != GripJSONNull ? grip_json_get_number(tmp) : 0;
 	grip_destroy_json_value(tmp);
 
+	Punishment[PunishmentCreated] = grip_json_object_get_number(punishment, "created_at");
+
 	tmp = grip_json_object_get_value(punishment, "expired_at");
 	Punishment[PunishmentExpired] = grip_json_get_type(tmp) != GripJSONNull ? grip_json_get_number(tmp) : 0;
 	grip_destroy_json_value(tmp);
@@ -236,12 +239,18 @@ public plugin_natives() {
 	register_native("APS_SetExtra", "NativeSetExtra", 0);
 	register_native("APS_GetTime", "NativeGetTime", 0);
 	register_native("APS_SetTime", "NativeSetTime", 0);
+	register_native("APS_GetCreated", "NativeGetCreated", 0);
+	register_native("APS_SetCreated", "NativeSetCreated", 0);
 	register_native("APS_GetExpired", "NativeGetExpired", 0);
 	register_native("APS_SetExpired", "NativeSetExpired", 0);
 	register_native("APS_GetReason", "NativeGetReason", 0);
 	register_native("APS_SetReason", "NativeSetReason", 0);
 	register_native("APS_GetDetails", "NativeGetDetails", 0);
 	register_native("APS_SetDetails", "NativeSetDetails", 0);
+	register_native("APS_GetPunisherType", "NativeGetPunisherType", 0);
+	register_native("APS_SetPunisherType", "NativeSetPunisherType", 0);
+	register_native("APS_GetPunisherId", "NativeGetPunisherId", 0);
+	register_native("APS_SetPunisherId", "NativeSetPunisherId", 0);
 	//register_native("APS_UnPunishPlayer", "NativeUnPunishPlayer", 0);
 	//register_native("APS_CheckPlayer", "NativeCheckPlayer", 0);
 }
@@ -324,11 +333,15 @@ public NativePunishPlayer(plugin, argc) {
 	} else {
 		grip_json_object_set_null(request, "details");
 	}
-	grip_json_object_set_number(request, "punisher_id", Punishment[PunishmentPunisherID]);
+
+	if (Punishment[PunishmentPunisherID] > 0) {
+		grip_json_object_set_number(request, "punisher_id", Punishment[PunishmentPunisherID]);
+	}
 
 	if (GMX_PlayerIsLoaded(player)) {
 		grip_json_object_set_number(request, "player_id", GMX_PlayerGetPlayerId(player));
 		GMX_MakeRequest("punish", request, "OnPunished", get_user_userid(player));
+		grip_destroy_json_value(request);
 	} else {
 		new steamid[24], nick[32], ip[32];
 		get_user_authid(player, steamid, charsmax(steamid));
@@ -342,6 +355,7 @@ public NativePunishPlayer(plugin, argc) {
 		grip_json_object_set_string(request, "nick", nick);
 		grip_json_object_set_string(request, "ip", ip);
 		GMX_MakeRequest("punish/immediately", request, "OnPunished", get_user_userid(player));
+		grip_destroy_json_value(request);
 	}
 
 	return 1;
@@ -363,7 +377,7 @@ public NativeSetExtra(plugin, argc) {
 }
 
 public NativeGetTime(plugin, argc) {
-	return Punishment[PunishmentExpired];
+	return Punishment[PunishmentTime];
 }
 
 public NativeSetTime(plugin, argc) {
@@ -373,8 +387,19 @@ public NativeSetTime(plugin, argc) {
 	return 1;
 }
 
+public NativeGetCreated(plugin, argc) {
+	return Punishment[PunishmentCreated];
+}
+
+public NativeSetCreated(plugin, argc) {
+	enum { arg_value = 1};
+	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
+	Punishment[PunishmentCreated] = get_param(arg_value);
+	return 1;
+}
+
 public NativeGetExpired(plugin, argc) {
-	return Punishment[PunishmentTime];
+	return Punishment[PunishmentExpired];
 }
 
 public NativeSetExpired(plugin, argc) {
@@ -408,6 +433,27 @@ public NativeSetDetails(plugin, argc) {
 	return get_string(arg_value, Punishment[PunishmentDetails], charsmax(Punishment[PunishmentDetails]));
 }
 
+public APS_PunisherType:NativeGetPunisherType(plugin, argc) {
+	return Punishment[PunishmentPunisherType];
+}
+
+public NativeSetPunisherType(plugin, argc) {
+	enum { arg_value = 1  };
+	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
+	Punishment[PunishmentPunisherType] = APS_PunisherType:get_param(arg_value);
+	return 1;
+}
+
+public NativeGetPunisherId(plugin, argc) {
+	return Punishment[PunishmentPunisherID];
+}
+
+public NativeSetPunisherId(plugin, argc) {
+	enum { arg_value = 1  };
+	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
+	Punishment[PunishmentPunisherID] = get_param(arg_value);
+	return 1;
+}
 
 /*
 public NativeUnPunishPlayer(plugin, params) {
