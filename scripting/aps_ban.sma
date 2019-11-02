@@ -120,7 +120,7 @@ new Token[TokenStruct];
 consoleParseConfig() {
 	new path[128];
 	get_localinfo("amxx_configsdir", path, charsmax(path));
-	add(path, charsmax(path), "/abs_ban_console.txt");
+	add(path, charsmax(path), "/aps_ban_console.txt");
 
 	new file = fopen(path, "rt");
 	if (!file) {
