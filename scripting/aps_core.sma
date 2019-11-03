@@ -169,7 +169,7 @@ public TaskCheckPlayer(id) {
 		return;
 	}
 
-	new now = get_systime(), active = 0;
+	new now = get_systime() + GMX_GetServerTimeDiff(), active = 0;
 	for (new i = 0, n = ArraySize(PlayersPunishment[id]); i < n; i++) {
 		ArrayGetArray(PlayersPunishment[id], i, Punishment, sizeof Punishment);
 		if (Punishment[PunishmentStatus] != APS_PunishmentStatusActive) {
@@ -231,9 +231,11 @@ parsePunishment(const GripJSONValue:punishment) {
 
 public plugin_natives() {
 	register_native("APS_RegisterType", "NativeRegisterType", 0);
+	register_native("APS_GetTypesNum", "NativeGetTypesNum", 0);
 	register_native("APS_GetTypeIndex", "NativeGetTypeIndex", 0);
 	register_native("APS_GetTypeName", "NativeGetTypeName", 0);
 	register_native("APS_PunishPlayer", "NativePunishPlayer", 0);
+	register_native("APS_GetPlayerPunishment", "NativeGetPlayerPunishment", 0);
 	register_native("APS_GetId", "NativeGetId", 0);
 	register_native("APS_GetExtra", "NativeGetExtra", 0);
 	register_native("APS_SetExtra", "NativeSetExtra", 0);
@@ -255,7 +257,7 @@ public plugin_natives() {
 	//register_native("APS_CheckPlayer", "NativeCheckPlayer", 0);
 }
 
-public APS_Type:NativeRegisterType(plugin, argc) {
+public APS_Type:NativeRegisterType(const plugin, const argc) {
 	enum { arg_type = 1 };
 
 	CHECK_NATIVE_ARGS_NUM(argc, 1, APS_InvalidType)
@@ -265,7 +267,11 @@ public APS_Type:NativeRegisterType(plugin, argc) {
 	return APS_Type:ArrayPushString(Types, type);
 }
 
-public APS_Type:NativeGetTypeIndex(plugin, argc) {
+public NativeGetTypesNum(const plugin, const argc) {
+	return TypesNum;
+}
+
+public APS_Type:NativeGetTypeIndex(const plugin, const argc) {
 	enum { arg_type = 1 };
 
 	CHECK_NATIVE_ARGS_NUM(argc, 1, APS_InvalidType)
@@ -275,7 +281,7 @@ public APS_Type:NativeGetTypeIndex(plugin, argc) {
 	return APS_Type:ArrayFindString(Types, type);
 }
 
-public NativeGetTypeName(plugin, argc) {
+public NativeGetTypeName(const plugin, const argc) {
 	enum { arg_type = 1, arg_value, arg_len };
 
 	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
@@ -287,7 +293,7 @@ public NativeGetTypeName(plugin, argc) {
 	return set_string(arg_value, type, get_param(arg_len));
 }
 
-public NativePunishPlayer(plugin, argc) {
+public NativePunishPlayer(const plugin, const argc) {
 	enum { arg_player = 1, arg_type, arg_time, arg_reason, arg_details, arg_punisher_id, arg_extra };
 	arrayset(Punishment, 0, sizeof Punishment);
 
@@ -361,94 +367,119 @@ public NativePunishPlayer(plugin, argc) {
 	return 1;
 }
 
-public NativeGetId(plugin, argc) {
+public bool:NativeGetPlayerPunishment(const plugin, const argc) {
+	enum { arg_player = 1, arg_type };
+	arrayset(Punishment, 0, sizeof Punishment);
+
+	CHECK_NATIVE_ARGS_NUM(argc, 2, false)
+
+	new player = get_param(arg_player);
+	CHECK_NATIVE_PLAYER(player, false)
+
+	new type = get_param(arg_type);
+	CHECK_NATIVE_TYPE_ERROR(type, false)
+
+	for (new i = 0, n = ArraySize(PlayersPunishment[player]); i < n; i++) {
+		ArrayGetArray(PlayersPunishment[player], i, Punishment, sizeof Punishment);
+		if (Punishment[PunishmentStatus] != APS_PunishmentStatusActive) {
+			continue;
+		}
+		if (Punishment[PunishmentType] == type) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+public NativeGetId(const plugin, const argc) {
 	return Punishment[PunishmentID];
 }
 
-public NativeGetExtra(plugin, argc) {
+public NativeGetExtra(const plugin, const argc) {
 	return Punishment[PunishmentExtra];
 }
 
-public NativeSetExtra(plugin, argc) {
+public NativeSetExtra(const plugin, const argc) {
 	enum { arg_value = 1};
 	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
 	Punishment[PunishmentExtra] = get_param(arg_value);
 	return 1;
 }
 
-public NativeGetTime(plugin, argc) {
+public NativeGetTime(const plugin, const argc) {
 	return Punishment[PunishmentTime];
 }
 
-public NativeSetTime(plugin, argc) {
+public NativeSetTime(const plugin, const argc) {
 	enum { arg_value = 1};
 	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
 	Punishment[PunishmentTime] = get_param(arg_value);
 	return 1;
 }
 
-public NativeGetCreated(plugin, argc) {
+public NativeGetCreated(const plugin, const argc) {
 	return Punishment[PunishmentCreated];
 }
 
-public NativeSetCreated(plugin, argc) {
+public NativeSetCreated(const plugin, const argc) {
 	enum { arg_value = 1};
 	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
 	Punishment[PunishmentCreated] = get_param(arg_value);
 	return 1;
 }
 
-public NativeGetExpired(plugin, argc) {
+public NativeGetExpired(const plugin, const argc) {
 	return Punishment[PunishmentExpired];
 }
 
-public NativeSetExpired(plugin, argc) {
+public NativeSetExpired(const plugin, const argc) {
 	enum { arg_value = 1};
 	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
 	Punishment[PunishmentExpired] = get_param(arg_value);
 	return 1;
 }
 
-public NativeGetReason(plugin, argc) {
+public NativeGetReason(const plugin, const argc) {
 	enum { arg_value = 1, arg_len  };
 	CHECK_NATIVE_ARGS_NUM(argc, 2, 0)
 	return set_string(arg_value, Punishment[PunishmentReason], get_param(arg_len));
 }
 
-public NativeSetReason(plugin, argc) {
+public NativeSetReason(const plugin, const argc) {
 	enum { arg_value = 1  };
 	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
 	return get_string(arg_value, Punishment[PunishmentReason], charsmax(Punishment[PunishmentReason]));
 }
 
-public NativeGetDetails(plugin, argc) {
+public NativeGetDetails(const plugin, const argc) {
 	enum { arg_value = 1, arg_len  };
 	CHECK_NATIVE_ARGS_NUM(argc, 2, 0)
 	return set_string(arg_value, Punishment[PunishmentDetails], get_param(arg_len));
 }
 
-public NativeSetDetails(plugin, argc) {
+public NativeSetDetails(const plugin, const argc) {
 	enum { arg_value = 1  };
 	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
 	return get_string(arg_value, Punishment[PunishmentDetails], charsmax(Punishment[PunishmentDetails]));
 }
 
-public APS_PunisherType:NativeGetPunisherType(plugin, argc) {
+public APS_PunisherType:NativeGetPunisherType(const plugin, const argc) {
 	return Punishment[PunishmentPunisherType];
 }
 
-public NativeSetPunisherType(plugin, argc) {
+public NativeSetPunisherType(const plugin, const argc) {
 	enum { arg_value = 1  };
 	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
 	Punishment[PunishmentPunisherType] = APS_PunisherType:get_param(arg_value);
 	return 1;
 }
 
-public NativeGetPunisherId(plugin, argc) {
+public NativeGetPunisherId(const plugin, const argc) {
 	return Punishment[PunishmentPunisherID];
 }
 
-public NativeSetPunisherId(plugin, argc) {
+public NativeSetPunisherId(const plugin, const argc) {
 	enum { arg_value = 1  };
 	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
 	Punishment[PunishmentPunisherID] = get_param(arg_value);

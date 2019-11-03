@@ -27,9 +27,11 @@ forward APS_PlayerChecking(const id);
 forward APS_PlayerChecked(const id);
 
 native APS_Type:APS_RegisterType(const name[]);
+native APS_GetTypesNum();
 native APS_Type:APS_GetTypeIndex(const name[]);
 native APS_GetTypeName(const APS_Type:index, value[], len);
 native APS_PunishPlayer(const id, const APS_Type:type, const time, const reason[], const details[] = "", const punisherId = 0, const extra = 0);
+native bool:APS_GetPlayerPunishment(const player, const APS_Type:type);
 native APS_GetId();
 native APS_GetExtra();
 native APS_SetExtra(const value);

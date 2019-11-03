@@ -1,5 +1,8 @@
 #pragma semicolon 1
 
+#define MENU_TAB "^t^t"
+// #define HIDE_ME_IN_MENU
+
 #include <amxmodx>
 #include <time>
 #include <reapi>
@@ -26,13 +29,8 @@
 	} else \
 		Players[%1][PlayerStep]+=%4
 
-
 const MAX_TYPE_TITLE_LENGTH = 64;
 const MAX_REASON_TITLE_LENGTH = 64;
-
-#define MENU_TAB "^t^t"
-#define DEBUG
-// #define HIDE_ME_IN_MENU
 
 new TeamNames[][] = {
 	"SPEC",
@@ -273,9 +271,6 @@ showPlayersMenu(const id, const page = 0) {
 		} else if (is_user_hltv(player)) {
 			len += formatex(menu[len], charsmax(menu) - len, "%s\d[%d] [HLTV] ", MENU_TAB, ++item);
 		} else if (is_user_bot(player)) {
-#if defined DEBUG
-			keys |= (1 << item);
-#endif
 			len += formatex(menu[len], charsmax(menu) - len, "%s\d[%d] [%s] [BOT] ", MENU_TAB, ++item, TeamNames[team]);
 		} else {
 //             flags = get_user_flags(player);
