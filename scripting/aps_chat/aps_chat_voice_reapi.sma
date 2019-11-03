@@ -40,7 +40,7 @@ public APS_PlayerExonerated(const id, const APS_Type:type) {
 
 public CSGameRules_CanPlayerHearPlayer_Pre(const listener, const sender) {
 	if (Muted[sender]) {
-		SetHookChainReturn(ATYPE_INTEGER, 0);
+		SetHookChainReturn(ATYPE_BOOL, false);
 		return HC_SUPERCEDE;
 	}
 
