@@ -177,7 +177,26 @@ public OnAmnestied(const GmxResponseStatus:status, GripJSONValue:data, const use
 	}
 
 	new GripJSONValue:tmp = grip_json_object_get_value(data, "punishment");
-	parsePunishment(tmp);
+	new punishmentID = grip_json_object_get_number(tmp, "id");
+	grip_destroy_json_value(tmp);
+
+	for (new i = 0, n = ArraySize(PlayersPunishment[id]); i < n; i++) {
+		ArrayGetArray(PlayersPunishment[id], i, Punishment, sizeof Punishment);
+		if (Punishment[PunishmentStatus] != APS_PunishmentStatusActive) {
+			continue;
+		}
+
+		if (Punishment[PunishmentID] != punishmentID) {
+			continue;
+		}
+
+		ExecuteForward(Forwards[FWD_PlayerAmnestying], FwdReturn, id, Punishment[PunishmentType]);
+		if (FwdReturn != PLUGIN_HANDLED) {
+			Punishment[PunishmentStatus] = APS_PunishmentStatusAmnestied;
+			ArraySetArray(PlayersPunishment[id], i, Punishment, sizeof Punishment);
+			ExecuteForward(Forwards[FWD_PlayerAmnestied], FwdReturn, id, Punishment[PunishmentType]);
+		}
+	}
 	grip_destroy_json_value(tmp);
 }
 
