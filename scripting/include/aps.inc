@@ -9,7 +9,7 @@
 
 #define APS_MAJOR_VERSION			0
 #define APS_MINOR_VERSION			1
-#define APS_MAINTENANCE_VERSION		2
+#define APS_MAINTENANCE_VERSION		3
 
 enum APS_Type {
 	APS_InvalidType = -1,
@@ -21,8 +21,8 @@ forward APS_Initing();
 forward APS_Inited();
 forward APS_PlayerPunishing(const id, const APS_Type:type);
 forward APS_PlayerPunished(const id, const APS_Type:type);
-forward APS_PlayerExonerating(const id, const APS_Type:type);
-forward APS_PlayerExonerated(const id, const APS_Type:type);
+forward APS_PlayerAmnestying(const id, const APS_Type:type);
+forward APS_PlayerAmnestied(const id, const APS_Type:type);
 forward APS_PlayerChecking(const id);
 forward APS_PlayerChecked(const id);
 

@@ -24,16 +24,18 @@
 		return %2; \
 	}
 
-enum FWD {
+enum {
 	FWD_PlayerPunishing,
 	FWD_PlayerPunished,
-	FWD_PlayerExonerating,
-	FWD_PlayerExonerated,
+	FWD_PlayerAmnestying,
+	FWD_PlayerAmnestied,
 	FWD_PlayerChecking,
 	FWD_PlayerChecked,
+
+	FWD_LAST
 }
 
-new Forwards[FWD], FwdReturn;
+new Forwards[FWD_LAST], FwdReturn;
 
 new Array:Types, TypesNum;
 
@@ -65,8 +67,8 @@ public plugin_init() {
 
 	Forwards[FWD_PlayerPunishing] = CreateMultiForward("APS_PlayerPunishing", ET_STOP, FP_CELL, FP_CELL);
 	Forwards[FWD_PlayerPunished] = CreateMultiForward("APS_PlayerPunished", ET_IGNORE, FP_CELL, FP_CELL);
-	Forwards[FWD_PlayerExonerating] = CreateMultiForward("APS_PlayerExonerating", ET_STOP, FP_CELL, FP_CELL);
-	Forwards[FWD_PlayerExonerated] = CreateMultiForward("APS_PlayerExonerated", ET_IGNORE, FP_CELL, FP_CELL);
+	Forwards[FWD_PlayerAmnestying] = CreateMultiForward("APS_PlayerAmnestying", ET_STOP, FP_CELL, FP_CELL);
+	Forwards[FWD_PlayerAmnestied] = CreateMultiForward("APS_PlayerAmnestied", ET_IGNORE, FP_CELL, FP_CELL);
 	Forwards[FWD_PlayerChecking] = CreateMultiForward("APS_PlayerChecking", ET_STOP, FP_CELL);
 	Forwards[FWD_PlayerChecked] = CreateMultiForward("APS_PlayerChecked", ET_IGNORE, FP_CELL);
 }
@@ -90,12 +92,10 @@ public plugin_end() {
 	for (new i = 1; i <= MAX_PLAYERS; i++) {
 		ArrayDestroy(PlayersPunishment[i]);
 	}
-	DestroyForward(Forwards[FWD_PlayerPunishing]);
-	DestroyForward(Forwards[FWD_PlayerPunished]);
-	DestroyForward(Forwards[FWD_PlayerExonerating]);
-	DestroyForward(Forwards[FWD_PlayerExonerated]);
-	DestroyForward(Forwards[FWD_PlayerChecking]);
-	DestroyForward(Forwards[FWD_PlayerChecked]);
+
+	for (new i = 0; i < sizeof Forwards; i++) {
+		DestroyForward(Forwards[i]);
+	}
 }
 
 public client_connect(id) {
@@ -199,11 +199,11 @@ public TaskCheckPlayer(id) {
 			continue;
 		}
 		
-		ExecuteForward(Forwards[FWD_PlayerExonerating], FwdReturn, id, Punishment[PunishmentType]);
+		ExecuteForward(Forwards[FWD_PlayerAmnestying], FwdReturn, id, Punishment[PunishmentType]);
 		if (FwdReturn != PLUGIN_HANDLED) {
 			Punishment[PunishmentStatus] = APS_PunishmentStatusExpired
 			ArraySetArray(PlayersPunishment[id], i, Punishment, sizeof Punishment);
-			ExecuteForward(Forwards[FWD_PlayerExonerated], FwdReturn, id, Punishment[PunishmentType]);
+			ExecuteForward(Forwards[FWD_PlayerAmnestied], FwdReturn, id, Punishment[PunishmentType]);
 		} else {
 			active++;
 		}

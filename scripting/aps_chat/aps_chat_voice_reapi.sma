@@ -31,7 +31,7 @@ public APS_PlayerPunished(const id, const APS_Type:type) {
 	}
 }
 
-public APS_PlayerExonerated(const id, const APS_Type:type) {
+public APS_PlayerAmnestying(const id, const APS_Type:type) {
 	if (type == TypeId) {
 		Muted[id] = false;
 	}
