@@ -309,6 +309,7 @@ parsePunishment(const GripJSONValue:punishment) {
 
 public plugin_natives() {
 	register_native("APS_RegisterType", "NativeRegisterType", 0);
+	register_native("APS_IsValidType", "NativeIsValidType", 0);
 	register_native("APS_GetTypesNum", "NativeGetTypesNum", 0);
 	register_native("APS_GetTypeIndex", "NativeGetTypeIndex", 0);
 	register_native("APS_GetTypeName", "NativeGetTypeName", 0);
@@ -343,6 +344,14 @@ public APS_Type:NativeRegisterType(const plugin, const argc) {
 	new type[APS_MAX_TYPE_LENGTH];
 	get_string(arg_type, type, charsmax(type));
 	return APS_Type:ArrayPushString(Types, type);
+}
+
+public bool:NativeIsValidType(const plugin, const argc) {
+	enum { arg_type = 1 };
+	if (argc < arg_type) {
+		return false;
+	}
+	return bool:(0 <= get_param(arg_type) < TypesNum);
 }
 
 public NativeGetTypesNum(const plugin, const argc) {

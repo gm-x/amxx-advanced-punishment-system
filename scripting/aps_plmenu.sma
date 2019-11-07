@@ -188,11 +188,13 @@ public CmdPlayersMenu(const id) {
 	return PLUGIN_HANDLED;
 }
 
-public APS_PlMenu_Add(const type[], const title[], const handler, const resonHandler, const timeHandler, const extraHandler, const bool:needConfirm) {
+public APS_PlMenu_Add(const APS_Type:type, const title[], const handler, const resonHandler, const timeHandler, const extraHandler, const bool:needConfirm) {
 	clear_item();
+	if (!APS_IsValidType(type)) {
+		return -1;
+	}
 
-	new APS_Type:typeId = APS_GetTypeIndex(type);
-	Item[ItemType] = typeId;
+	Item[ItemType] = type;
 	copy(Item[ItemTitle], charsmax(Item[ItemTitle]), title);
 	Item[ItemHandler] = handler != Handler_Invaild ? handler : Handler_Default;
 	Item[ItemResonHandler] = resonHandler;

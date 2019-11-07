@@ -1,7 +1,6 @@
 #include <amxmodx>
 #include <VtcApi>
 #include <aps>
-#include <aps_chat>
 
 new APS_Type:TypeId;
 
@@ -10,20 +9,20 @@ public plugin_init() {
 }
 
 public APS_Inited() {
-	TypeId = APS_GetTypeIndex("chat");
+	TypeId = APS_GetTypeIndex("voice_chat");
 	if (TypeId == APS_InvalidType) {
-		set_fail_state("[APS CHAT VTC] chat type not found");
+		set_fail_state("[APS CHAT REAPI] Type voice_chat not registered");
 	}
 }
 
 public APS_PlayerPunished(const id, const APS_Type:type) {
-	if (type == TypeId && APS_GetExtra() & APS_Chat_Voice) {
+	if (type == TypeId) {
 		VTC_MuteClient(id);
 	}
 }
 
 public APS_PlayerExonerated(const id, const APS_Type:type) {
-	if (type == TypeId && APS_GetExtra() & APS_Chat_Voice) {
+	if (type == TypeId) {
 		VTC_UnmuteClient(id);
 	}
 }

@@ -1,0 +1,5 @@
+[en]
+APS_TYPE_VOICE_CHAT=Voice Chat
+
+[ru]
+APS_TYPE_VOICE_CHAT=Голосовой Чат

@@ -33,7 +33,7 @@ public APS_Initing() {
 }
 
 public APS_PlMenu_Inited() {
-	APS_PlMenu_Add("ban", "APS_TYPE_BAN");
+	APS_PlMenu_Add(TypeId, "APS_TYPE_BAN");
 }
 
 public HandlePlMenuAction(const admin, const player, const reason[], const time) {
@@ -168,7 +168,7 @@ consoleParseLine(const tpl[]) {
 				len = 0;
 			} else {
 				tmp[len] = EOS;
-				tkn = consoleGetTocken(tmp);
+				tkn = consoleGetToken(tmp);
 				if (tkn != TokenInvalid) {
 					newLine = consolePushToken(tkn, newLine);
 				}
@@ -192,7 +192,7 @@ consoleParseLine(const tpl[]) {
 	}
 }
 
-TokenEnum:consoleGetTocken(const token[]) {
+TokenEnum:consoleGetToken(const token[]) {
 	if (equal(token, "ID")) {
 		return TokenBanId;
 	}
