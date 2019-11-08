@@ -4,12 +4,11 @@
 // #define HIDE_ME_IN_MENU
 
 #include <amxmodx>
-#include <time>
 #include <reapi>
 #include <grip>
 #include <gmx>
 #include <aps>
-#include <aps_mixed>
+#include <aps_time>
 
 #define ACTIVE_ITEM(%0) MENU_TAB + "\r%d. " + #%0
 #define INACTIVE_ITEM(%0) MENU_TAB + "\d%d. " + #%0
@@ -95,7 +94,7 @@ public plugin_init() {
 
 	register_dictionary("aps_plmenu.txt");
 	register_dictionary("common.txt");
-	register_dictionary("time.txt");
+	register_dictionary("aps_time.txt");
 
 	RegisterHookChain(RG_CBasePlayer_SetClientUserInfoName, "CBasePlayer_SetClientUserInfoName_Post", true);
 
@@ -111,7 +110,6 @@ public plugin_init() {
 	Reasons = ArrayCreate(reason_s, 0);
 	Times = ArrayCreate(1, 0);
 
-	parseTimes("1i 1d 1w 1m 1y");
 	hook_cvar_change(create_cvar(
 		"aps_plmenu_times",
 		"1i 1d 1w 1m 1y"
@@ -119,9 +117,9 @@ public plugin_init() {
 }
 
 public plugin_cfg() {
-	ArrayPushCell(Times, 60);
-	ArrayPushCell(Times, 120);
-	TimesNum = ArraySize(Times);
+	new times[128];
+	get_cvar_string("aps_plmenu_times", times, charsmax(times));
+	parseTimes(times);
 
 
 	new fwdInited = CreateMultiForward("APS_PlMenu_Inited", ET_IGNORE);
@@ -399,8 +397,7 @@ showTimesMenu(const id, const page = 0) {
 	for (new i = start, item, time, title[64]; i < end; i++) {
 		time = ArrayGetCell(Times, i);
 		keys |= (1 << item);
-
-		get_time_length(id, time, timeunit_seconds, title, charsmax(title));
+		aps_get_time_length(id, time, title, charsmax(title));
 		len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%s^n), ++item, title);
 	}
 
@@ -440,7 +437,7 @@ showConfirmMenu(const id) {
 
 	if (Players[id][PlayerTime] >= 0) {
 		new time[64];
-		get_time_length(id, Players[id][PlayerTime], timeunit_seconds, time, charsmax(time));
+		aps_get_time_length(id, Players[id][PlayerTime], time, charsmax(time));
 		len += formatex(menu[len], charsmax(menu) - len, "%s\y%l\w: \y%s^n", MENU_TAB, "APS_MENU_TIME", time);
 	} else {
 		len += formatex(menu[len], charsmax(menu) - len, "%s\y%l\w: \r%l^n", MENU_TAB, "APS_MENU_TIME", "APS_MENU_FOREVER");

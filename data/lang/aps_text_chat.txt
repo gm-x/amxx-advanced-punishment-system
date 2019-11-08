@@ -1,5 +1,7 @@
 [en]
 APS_TYPE_TEXT_CHAT=Text Chat
+APS_CHAT_BLOCKED=You have been blocked
 
 [ru]
 APS_TYPE_TEXT_CHAT=Текстовый Чат
+APS_CHAT_BLOCKED=Текстовый Чат
