@@ -6,11 +6,13 @@
 new APS_Type:TypeId;
 new bool:Blocked[MAX_PLAYERS + 1];
 
-public plugin_init() {
-	register_plugin("[APS] Chat CM Addon", "0.1.0", "GM-X Team");
-
+public plugin_precache() {
 	register_clcmd("say", "CmdSay");
 	register_clcmd("say_team", "CmdSay");
+}
+
+public plugin_init() {
+	register_plugin("[APS] Chat CM Addon", "0.1.0", "GM-X Team");
 
 	APS_TextIgnoreListInit();
 }
@@ -20,6 +22,33 @@ public plugin_cfg() {
 	get_localinfo("amxx_configsdir", path, charsmax(path));
 	add(path, charsmax(path), "/aps_text_ingore_list.ini");
 	APS_TextIgnoreListLoad(path);
+}
+
+public client_disconnected(id) {
+	Blocked[id] = false;
+}
+
+public APS_PlayerChecking(const id) {
+	Blocked[id] = false;
+}
+
+public APS_Inited() {
+	TypeId = APS_GetTypeIndex("text_chat");
+	if (TypeId == APS_InvalidType) {
+		set_fail_state("[APS CHAT REAPI] Type text_chat not registered");
+	}
+}
+
+public APS_PlayerPunished(const id, const APS_Type:type) {
+	if (type == TypeId) {
+		Blocked[id] = true;
+	}
+}
+
+public APS_PlayerAmnestying(const id, const APS_Type:type) {
+	if (type == TypeId) {
+		Blocked[id] = false;
+	}
 }
 
 public CmdSay(const id) {
@@ -36,31 +65,4 @@ public CmdSay(const id) {
 	}
 
 	return PLUGIN_HANDLED;
-}
-
-public client_connect(id) {
-	Blocked[id] = false;
-}
-
-public client_disconnected(id) {
-	Blocked[id] = false;
-}
-
-public APS_Inited() {
-	TypeId = APS_GetTypeIndex("chat");
-	if (TypeId == APS_InvalidType) {
-		set_fail_state("[APS CHAT TEXT] chat module not found");
-	}
-}
-
-public APS_PlayerPunished(const id, const APS_Type:type) {
-	if (type == TypeId && APS_GetExtra() & APS_Chat_Text) {
-		Blocked[id] = true;
-	}
-}
-
-public APS_PlayerExonerated(const id, const APS_Type:type) {
-	if (type == TypeId && APS_GetExtra() & APS_Chat_Text) {
-		Blocked[id] = false;
-	}
 }

@@ -3,7 +3,6 @@
 ||| Ник: %PLAYER_NAME% sdfsd
 ||| IP: %PLAYER_IP%
 ||| STEAM_ID: %PLAYER_STEAMID%
-||| Забанен админом: %PUNISHER_NAME%
 ||| Причина: %REASON%
 ||| Бан выдан: %CREATED%
 ||| Забанен на: %TIME%

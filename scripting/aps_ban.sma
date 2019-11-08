@@ -1,8 +1,8 @@
 #include <amxmodx>
-#include <time>
 #include <gmx>
 #include <aps>
 #include <aps_plmenu>
+#include <aps_time>
 
 enum FWD {
 	FWD_PlayerBanKick,
@@ -14,7 +14,10 @@ new APS_Type:TypeId;
 
 public plugin_init() {
 	register_plugin("[APS] Ban", "0.1.0", "GM-X Team");
+
 	register_dictionary("aps_ban.txt");
+	register_dictionary("aps_time.txt");
+
 	register_concmd("aps_ban", "CmdBan", ADMIN_BAN);
 	Forwards[FWD_PlayerBanKick] = CreateMultiForward("APS_PlayerBanKick", ET_STOP, FP_CELL);
 }
@@ -33,7 +36,7 @@ public APS_Initing() {
 }
 
 public APS_PlMenu_Inited() {
-	APS_PlMenu_Add("ban", "APS_TYPE_BAN");
+	APS_PlMenu_Add(TypeId, "APS_TYPE_BAN");
 }
 
 public HandlePlMenuAction(const admin, const player, const reason[], const time) {
@@ -168,7 +171,7 @@ consoleParseLine(const tpl[]) {
 				len = 0;
 			} else {
 				tmp[len] = EOS;
-				tkn = consoleGetTocken(tmp);
+				tkn = consoleGetToken(tmp);
 				if (tkn != TokenInvalid) {
 					newLine = consolePushToken(tkn, newLine);
 				}
@@ -192,7 +195,7 @@ consoleParseLine(const tpl[]) {
 	}
 }
 
-TokenEnum:consoleGetTocken(const token[]) {
+TokenEnum:consoleGetToken(const token[]) {
 	if (equal(token, "ID")) {
 		return TokenBanId;
 	}
@@ -272,6 +275,10 @@ consoleClear() {
 }
 
 consolePrint(const id) {
+	if (ConsoleTokens == Invalid_Array) {
+		return;
+	}
+
 	SetGlobalTransTarget(id);
 
 	new buffer[192], len;
@@ -322,20 +329,12 @@ consolePrint(const id) {
 				len += format_time(buffer[len], charsmax(buffer) - len - 1, "%d/%m/%Y %H:%M:%S", APS_GetCreated() + GMX_GetServerTimeDiff());
 			}
 			case TokenTime : {
-				if (APS_GetTime() > 0) {
-					new time[64];
-					get_time_length(id, APS_GetTime(), timeunit_seconds, time, charsmax(time));
-					len += formatex(buffer[len], charsmax(buffer) - len - 1, "%s", time);
-				} else {
-					len += formatex(buffer[len], charsmax(buffer) - len - 1, "%l", "APS_BAN_FOREVER");
-				}
+				len += aps_get_time_length(id, APS_GetTime(), buffer[len], charsmax(buffer) - len - 1);
 			}
 
 			case TokenLeft : {
 				if (APS_GetTime() > 0) {
-					new time[64];
-					get_time_length(id, APS_GetExpired() - get_systime()  + GMX_GetServerTimeDiff(), timeunit_seconds, time, charsmax(time));
-					len += formatex(buffer[len], charsmax(buffer) - len - 1, "%s", time);
+					len += aps_get_time_length(id, APS_GetExpired() - get_systime()  + GMX_GetServerTimeDiff(), buffer[len], charsmax(buffer) - len - 1);
 				} else {
 					len += formatex(buffer[len], charsmax(buffer) - len - 1, "%l", "APS_BAN_NEVER");
 				}

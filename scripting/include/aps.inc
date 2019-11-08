@@ -9,7 +9,7 @@
 
 #define APS_MAJOR_VERSION			0
 #define APS_MINOR_VERSION			1
-#define APS_MAINTENANCE_VERSION		1
+#define APS_MAINTENANCE_VERSION		3
 
 enum APS_Type {
 	APS_InvalidType = -1,
@@ -21,16 +21,18 @@ forward APS_Initing();
 forward APS_Inited();
 forward APS_PlayerPunishing(const id, const APS_Type:type);
 forward APS_PlayerPunished(const id, const APS_Type:type);
-forward APS_PlayerExonerating(const id, const APS_Type:type);
-forward APS_PlayerExonerated(const id, const APS_Type:type);
+forward APS_PlayerAmnestying(const id, const APS_Type:type);
+forward APS_PlayerAmnestied(const id, const APS_Type:type);
 forward APS_PlayerChecking(const id);
 forward APS_PlayerChecked(const id);
 
 native APS_Type:APS_RegisterType(const name[]);
+native bool:APS_IsValidType(const APS_Type:type);
 native APS_GetTypesNum();
 native APS_Type:APS_GetTypeIndex(const name[]);
 native APS_GetTypeName(const APS_Type:index, value[], len);
-native APS_PunishPlayer(const id, const APS_Type:type, const time, const reason[], const details[] = "", const punisherId = 0, const extra = 0);
+native bool:APS_PunishPlayer(const player, const APS_Type:type, const time, const reason[], const details[] = "", const punisherId = 0, const extra = 0);
+native bool:APS_AmnestyPlayer(const player, const punishmentID);
 native bool:APS_GetPlayerPunishment(const player, const APS_Type:type);
 native APS_GetId();
 native APS_GetExtra();

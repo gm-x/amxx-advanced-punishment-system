@@ -24,16 +24,18 @@
 		return %2; \
 	}
 
-enum FWD {
+enum {
 	FWD_PlayerPunishing,
 	FWD_PlayerPunished,
-	FWD_PlayerExonerating,
-	FWD_PlayerExonerated,
+	FWD_PlayerAmnestying,
+	FWD_PlayerAmnestied,
 	FWD_PlayerChecking,
 	FWD_PlayerChecked,
+
+	FWD_LAST
 }
 
-new Forwards[FWD], FwdReturn;
+new Forwards[FWD_LAST], FwdReturn;
 
 new Array:Types, TypesNum;
 
@@ -65,8 +67,8 @@ public plugin_init() {
 
 	Forwards[FWD_PlayerPunishing] = CreateMultiForward("APS_PlayerPunishing", ET_STOP, FP_CELL, FP_CELL);
 	Forwards[FWD_PlayerPunished] = CreateMultiForward("APS_PlayerPunished", ET_IGNORE, FP_CELL, FP_CELL);
-	Forwards[FWD_PlayerExonerating] = CreateMultiForward("APS_PlayerExonerating", ET_STOP, FP_CELL, FP_CELL);
-	Forwards[FWD_PlayerExonerated] = CreateMultiForward("APS_PlayerExonerated", ET_IGNORE, FP_CELL, FP_CELL);
+	Forwards[FWD_PlayerAmnestying] = CreateMultiForward("APS_PlayerAmnestying", ET_STOP, FP_CELL, FP_CELL);
+	Forwards[FWD_PlayerAmnestied] = CreateMultiForward("APS_PlayerAmnestied", ET_IGNORE, FP_CELL, FP_CELL);
 	Forwards[FWD_PlayerChecking] = CreateMultiForward("APS_PlayerChecking", ET_STOP, FP_CELL);
 	Forwards[FWD_PlayerChecked] = CreateMultiForward("APS_PlayerChecked", ET_IGNORE, FP_CELL);
 }
@@ -90,12 +92,10 @@ public plugin_end() {
 	for (new i = 1; i <= MAX_PLAYERS; i++) {
 		ArrayDestroy(PlayersPunishment[i]);
 	}
-	DestroyForward(Forwards[FWD_PlayerPunishing]);
-	DestroyForward(Forwards[FWD_PlayerPunished]);
-	DestroyForward(Forwards[FWD_PlayerExonerating]);
-	DestroyForward(Forwards[FWD_PlayerExonerated]);
-	DestroyForward(Forwards[FWD_PlayerChecking]);
-	DestroyForward(Forwards[FWD_PlayerChecked]);
+
+	for (new i = 0; i < sizeof Forwards; i++) {
+		DestroyForward(Forwards[i]);
+	}
 }
 
 public client_connect(id) {
@@ -162,6 +162,44 @@ public OnPunished(const GmxResponseStatus:status, GripJSONValue:data, const user
 	}
 }
 
+public OnAmnestied(const GmxResponseStatus:status, GripJSONValue:data, const userid) {
+	if (status != GmxResponseStatusOk) {
+		return;
+	}
+
+	new id = GMX_GetPlayerByUserID(userid);
+	if (!id) {
+		return;
+	}
+
+	if (grip_json_get_type(data) != GripJSONObject) {
+		return;
+	}
+
+	new GripJSONValue:tmp = grip_json_object_get_value(data, "punishment");
+	new punishmentID = grip_json_object_get_number(tmp, "id");
+	grip_destroy_json_value(tmp);
+
+	for (new i = 0, n = ArraySize(PlayersPunishment[id]); i < n; i++) {
+		ArrayGetArray(PlayersPunishment[id], i, Punishment, sizeof Punishment);
+		if (Punishment[PunishmentStatus] != APS_PunishmentStatusActive) {
+			continue;
+		}
+
+		if (Punishment[PunishmentID] != punishmentID) {
+			continue;
+		}
+
+		ExecuteForward(Forwards[FWD_PlayerAmnestying], FwdReturn, id, Punishment[PunishmentType]);
+		if (FwdReturn != PLUGIN_HANDLED) {
+			Punishment[PunishmentStatus] = APS_PunishmentStatusAmnestied;
+			ArraySetArray(PlayersPunishment[id], i, Punishment, sizeof Punishment);
+			ExecuteForward(Forwards[FWD_PlayerAmnestied], FwdReturn, id, Punishment[PunishmentType]);
+		}
+	}
+	grip_destroy_json_value(tmp);
+}
+
 public TaskCheckPlayer(id) {
 	id -= 100;
 
@@ -180,11 +218,11 @@ public TaskCheckPlayer(id) {
 			continue;
 		}
 		
-		ExecuteForward(Forwards[FWD_PlayerExonerating], FwdReturn, id, Punishment[PunishmentType]);
+		ExecuteForward(Forwards[FWD_PlayerAmnestying], FwdReturn, id, Punishment[PunishmentType]);
 		if (FwdReturn != PLUGIN_HANDLED) {
 			Punishment[PunishmentStatus] = APS_PunishmentStatusExpired
 			ArraySetArray(PlayersPunishment[id], i, Punishment, sizeof Punishment);
-			ExecuteForward(Forwards[FWD_PlayerExonerated], FwdReturn, id, Punishment[PunishmentType]);
+			ExecuteForward(Forwards[FWD_PlayerAmnestied], FwdReturn, id, Punishment[PunishmentType]);
 		} else {
 			active++;
 		}
@@ -195,131 +233,10 @@ public TaskCheckPlayer(id) {
 	}
 }
 
-parsePunishment(const GripJSONValue:punishment) {
-	arrayset(Punishment, 0, sizeof Punishment);
-	new GripJSONValue:tmp;
-
-	Punishment[PunishmentID] = grip_json_object_get_number(punishment, "id");
-	Punishment[PunishmentTime] = grip_json_object_get_number(punishment, "time");
-
-	new type[32];
-	grip_json_object_get_string(punishment, "type", type, charsmax(type));
-	Punishment[PunishmentType] = ArrayFindString(Types, type);
-
-	tmp = grip_json_object_get_value(punishment, "extra");
-	Punishment[PunishmentExtra] = grip_json_get_type(tmp) != GripJSONNull ? grip_json_get_number(tmp) : 0;
-	grip_destroy_json_value(tmp);
-
-	Punishment[PunishmentCreated] = grip_json_object_get_number(punishment, "created_at");
-
-	tmp = grip_json_object_get_value(punishment, "expired_at");
-	Punishment[PunishmentExpired] = grip_json_get_type(tmp) != GripJSONNull ? grip_json_get_number(tmp) : 0;
-	grip_destroy_json_value(tmp);
-
-	tmp = grip_json_object_get_value(punishment, "reason");
-	if (grip_json_get_type(tmp) == GripJSONObject) {
-		grip_json_object_get_string(tmp, "title", Punishment[PunishmentReason], charsmax(Punishment[PunishmentReason]));
-	}
-	grip_destroy_json_value(tmp);
-
-	tmp = grip_json_object_get_value(punishment, "details");
-	if (grip_json_get_type(tmp) == GripJSONString) {
-		grip_json_get_string(tmp, Punishment[PunishmentDetails], charsmax(Punishment[PunishmentDetails]));
-	}
-	grip_destroy_json_value(tmp);
-}
-
-public plugin_natives() {
-	register_native("APS_RegisterType", "NativeRegisterType", 0);
-	register_native("APS_GetTypesNum", "NativeGetTypesNum", 0);
-	register_native("APS_GetTypeIndex", "NativeGetTypeIndex", 0);
-	register_native("APS_GetTypeName", "NativeGetTypeName", 0);
-	register_native("APS_PunishPlayer", "NativePunishPlayer", 0);
-	register_native("APS_GetPlayerPunishment", "NativeGetPlayerPunishment", 0);
-	register_native("APS_GetId", "NativeGetId", 0);
-	register_native("APS_GetExtra", "NativeGetExtra", 0);
-	register_native("APS_SetExtra", "NativeSetExtra", 0);
-	register_native("APS_GetTime", "NativeGetTime", 0);
-	register_native("APS_SetTime", "NativeSetTime", 0);
-	register_native("APS_GetCreated", "NativeGetCreated", 0);
-	register_native("APS_SetCreated", "NativeSetCreated", 0);
-	register_native("APS_GetExpired", "NativeGetExpired", 0);
-	register_native("APS_SetExpired", "NativeSetExpired", 0);
-	register_native("APS_GetReason", "NativeGetReason", 0);
-	register_native("APS_SetReason", "NativeSetReason", 0);
-	register_native("APS_GetDetails", "NativeGetDetails", 0);
-	register_native("APS_SetDetails", "NativeSetDetails", 0);
-	register_native("APS_GetPunisherType", "NativeGetPunisherType", 0);
-	register_native("APS_SetPunisherType", "NativeSetPunisherType", 0);
-	register_native("APS_GetPunisherId", "NativeGetPunisherId", 0);
-	register_native("APS_SetPunisherId", "NativeSetPunisherId", 0);
-	//register_native("APS_UnPunishPlayer", "NativeUnPunishPlayer", 0);
-	//register_native("APS_CheckPlayer", "NativeCheckPlayer", 0);
-}
-
-public APS_Type:NativeRegisterType(const plugin, const argc) {
-	enum { arg_type = 1 };
-
-	CHECK_NATIVE_ARGS_NUM(argc, 1, APS_InvalidType)
-
-	new type[APS_MAX_TYPE_LENGTH];
-	get_string(arg_type, type, charsmax(type));
-	return APS_Type:ArrayPushString(Types, type);
-}
-
-public NativeGetTypesNum(const plugin, const argc) {
-	return TypesNum;
-}
-
-public APS_Type:NativeGetTypeIndex(const plugin, const argc) {
-	enum { arg_type = 1 };
-
-	CHECK_NATIVE_ARGS_NUM(argc, 1, APS_InvalidType)
-
-	new type[APS_MAX_TYPE_LENGTH];
-	get_string(arg_type, type, charsmax(type));
-	return APS_Type:ArrayFindString(Types, type);
-}
-
-public NativeGetTypeName(const plugin, const argc) {
-	enum { arg_type = 1, arg_value, arg_len };
-
-	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
-
-	new typeIndex = get_param(arg_type);
-	CHECK_NATIVE_TYPE_ERROR(typeIndex, 0)
-	new type[APS_MAX_TYPE_LENGTH];
-	ArrayGetString(Types, typeIndex, type, charsmax(type));
-	return set_string(arg_value, type, get_param(arg_len));
-}
-
-public NativePunishPlayer(const plugin, const argc) {
-	enum { arg_player = 1, arg_type, arg_time, arg_reason, arg_details, arg_punisher_id, arg_extra };
-	arrayset(Punishment, 0, sizeof Punishment);
-
-	CHECK_NATIVE_ARGS_NUM(argc, 4, 0)
-
-	new player = get_param(arg_player);
-	CHECK_NATIVE_PLAYER(player, 0)
-
-	Punishment[PunishmentType] = get_param(arg_type);
-	CHECK_NATIVE_TYPE_ERROR(Punishment[PunishmentType], 0)
-
-	Punishment[PunishmentTime] = get_param(arg_time);
-	get_string(arg_reason, Punishment[PunishmentReason], charsmax(Punishment[PunishmentReason]));
-	get_string(arg_details, Punishment[PunishmentDetails], charsmax(Punishment[PunishmentDetails]));
-	Punishment[PunishmentPunisherID] = get_param(arg_punisher_id);
-	if (Punishment[PunishmentPunisherID] != 0 && is_user_connected(Punishment[PunishmentPunisherID]) && GMX_PlayerIsLoaded(Punishment[PunishmentPunisherID])) {
-		Punishment[PunishmentPunisherType] = APS_PunisherTypePlayer;
-	} else {
-		Punishment[PunishmentPunisherID] = 0;
-		Punishment[PunishmentPunisherType] = APS_PunisherTypeServer;
-	}
-	Punishment[PunishmentExtra] = get_param(arg_extra);
-
+bool:punishPlayer(const player) {
 	ExecuteForward(Forwards[FWD_PlayerPunishing], FwdReturn, player, Punishment[PunishmentType]);
 	if (FwdReturn == PLUGIN_HANDLED) {
-		return 0;
+		return false;
 	}
 
 	new GripJSONValue:request = grip_json_init_object();
@@ -364,7 +281,173 @@ public NativePunishPlayer(const plugin, const argc) {
 		grip_destroy_json_value(request);
 	}
 
-	return 1;
+	return true;
+}
+
+bool:amnestyPlayer(const player) {
+	new GripJSONValue:request = grip_json_init_object();
+	grip_json_object_set_number(request, "punishment_id", Punishment[PunishmentID]);
+	GMX_MakeRequest("punish/amnesty", request, "OnAmnestied", get_user_userid(player));
+	grip_destroy_json_value(request);
+	return true;
+}
+
+parsePunishment(const GripJSONValue:punishment) {
+	arrayset(Punishment, 0, sizeof Punishment);
+	new GripJSONValue:tmp;
+
+	Punishment[PunishmentID] = grip_json_object_get_number(punishment, "id");
+	Punishment[PunishmentTime] = grip_json_object_get_number(punishment, "time");
+
+	new type[32];
+	grip_json_object_get_string(punishment, "type", type, charsmax(type));
+	Punishment[PunishmentType] = ArrayFindString(Types, type);
+
+	tmp = grip_json_object_get_value(punishment, "extra");
+	Punishment[PunishmentExtra] = grip_json_get_type(tmp) != GripJSONNull ? grip_json_get_number(tmp) : 0;
+	grip_destroy_json_value(tmp);
+
+	Punishment[PunishmentCreated] = grip_json_object_get_number(punishment, "created_at");
+
+	tmp = grip_json_object_get_value(punishment, "expired_at");
+	Punishment[PunishmentExpired] = grip_json_get_type(tmp) != GripJSONNull ? grip_json_get_number(tmp) : 0;
+	grip_destroy_json_value(tmp);
+
+	tmp = grip_json_object_get_value(punishment, "reason");
+	if (grip_json_get_type(tmp) == GripJSONObject) {
+		grip_json_object_get_string(tmp, "title", Punishment[PunishmentReason], charsmax(Punishment[PunishmentReason]));
+	}
+	grip_destroy_json_value(tmp);
+
+	tmp = grip_json_object_get_value(punishment, "details");
+	if (grip_json_get_type(tmp) == GripJSONString) {
+		grip_json_get_string(tmp, Punishment[PunishmentDetails], charsmax(Punishment[PunishmentDetails]));
+	}
+	grip_destroy_json_value(tmp);
+}
+
+public plugin_natives() {
+	register_native("APS_RegisterType", "NativeRegisterType", 0);
+	register_native("APS_IsValidType", "NativeIsValidType", 0);
+	register_native("APS_GetTypesNum", "NativeGetTypesNum", 0);
+	register_native("APS_GetTypeIndex", "NativeGetTypeIndex", 0);
+	register_native("APS_GetTypeName", "NativeGetTypeName", 0);
+	register_native("APS_PunishPlayer", "NativePunishPlayer", 0);
+	register_native("APS_AmnestyPlayer", "NativeAmnestyPlayer", 0);
+	register_native("APS_GetPlayerPunishment", "NativeGetPlayerPunishment", 0);
+	register_native("APS_GetId", "NativeGetId", 0);
+	register_native("APS_GetExtra", "NativeGetExtra", 0);
+	register_native("APS_SetExtra", "NativeSetExtra", 0);
+	register_native("APS_GetTime", "NativeGetTime", 0);
+	register_native("APS_SetTime", "NativeSetTime", 0);
+	register_native("APS_GetCreated", "NativeGetCreated", 0);
+	register_native("APS_SetCreated", "NativeSetCreated", 0);
+	register_native("APS_GetExpired", "NativeGetExpired", 0);
+	register_native("APS_SetExpired", "NativeSetExpired", 0);
+	register_native("APS_GetReason", "NativeGetReason", 0);
+	register_native("APS_SetReason", "NativeSetReason", 0);
+	register_native("APS_GetDetails", "NativeGetDetails", 0);
+	register_native("APS_SetDetails", "NativeSetDetails", 0);
+	register_native("APS_GetPunisherType", "NativeGetPunisherType", 0);
+	register_native("APS_SetPunisherType", "NativeSetPunisherType", 0);
+	register_native("APS_GetPunisherId", "NativeGetPunisherId", 0);
+	register_native("APS_SetPunisherId", "NativeSetPunisherId", 0);
+	//register_native("APS_CheckPlayer", "NativeCheckPlayer", 0);
+}
+
+public APS_Type:NativeRegisterType(const plugin, const argc) {
+	enum { arg_type = 1 };
+
+	CHECK_NATIVE_ARGS_NUM(argc, 1, APS_InvalidType)
+
+	new type[APS_MAX_TYPE_LENGTH];
+	get_string(arg_type, type, charsmax(type));
+	return APS_Type:ArrayPushString(Types, type);
+}
+
+public bool:NativeIsValidType(const plugin, const argc) {
+	enum { arg_type = 1 };
+	if (argc < arg_type) {
+		return false;
+	}
+	return bool:(0 <= get_param(arg_type) < TypesNum);
+}
+
+public NativeGetTypesNum(const plugin, const argc) {
+	return TypesNum;
+}
+
+public APS_Type:NativeGetTypeIndex(const plugin, const argc) {
+	enum { arg_type = 1 };
+
+	CHECK_NATIVE_ARGS_NUM(argc, 1, APS_InvalidType)
+
+	new type[APS_MAX_TYPE_LENGTH];
+	get_string(arg_type, type, charsmax(type));
+	return APS_Type:ArrayFindString(Types, type);
+}
+
+public NativeGetTypeName(const plugin, const argc) {
+	enum { arg_type = 1, arg_value, arg_len };
+
+	CHECK_NATIVE_ARGS_NUM(argc, 1, 0)
+
+	new typeIndex = get_param(arg_type);
+	CHECK_NATIVE_TYPE_ERROR(typeIndex, 0)
+	new type[APS_MAX_TYPE_LENGTH];
+	ArrayGetString(Types, typeIndex, type, charsmax(type));
+	return set_string(arg_value, type, get_param(arg_len));
+}
+
+public bool:NativePunishPlayer(const plugin, const argc) {
+	enum { arg_player = 1, arg_type, arg_time, arg_reason, arg_details, arg_punisher_id, arg_extra };
+	arrayset(Punishment, 0, sizeof Punishment);
+
+	CHECK_NATIVE_ARGS_NUM(argc, 4, false)
+
+	new player = get_param(arg_player);
+	CHECK_NATIVE_PLAYER(player, false)
+
+	Punishment[PunishmentType] = get_param(arg_type);
+	CHECK_NATIVE_TYPE_ERROR(Punishment[PunishmentType], false)
+
+	Punishment[PunishmentTime] = get_param(arg_time);
+	get_string(arg_reason, Punishment[PunishmentReason], charsmax(Punishment[PunishmentReason]));
+	get_string(arg_details, Punishment[PunishmentDetails], charsmax(Punishment[PunishmentDetails]));
+	Punishment[PunishmentPunisherID] = get_param(arg_punisher_id);
+	if (Punishment[PunishmentPunisherID] != 0 && is_user_connected(Punishment[PunishmentPunisherID]) && GMX_PlayerIsLoaded(Punishment[PunishmentPunisherID])) {
+		Punishment[PunishmentPunisherType] = APS_PunisherTypePlayer;
+	} else {
+		Punishment[PunishmentPunisherID] = 0;
+		Punishment[PunishmentPunisherType] = APS_PunisherTypeServer;
+	}
+	Punishment[PunishmentExtra] = get_param(arg_extra);
+
+	return punishPlayer(player);
+}
+
+public bool:NativeAmnestyPlayer(const plugin, const argc) {
+	enum { arg_player = 1, arg_type };
+
+	CHECK_NATIVE_ARGS_NUM(argc, 2, false)
+
+	new player = get_param(arg_player);
+	CHECK_NATIVE_PLAYER(player, false)
+
+	new type = get_param(arg_type);
+	CHECK_NATIVE_TYPE_ERROR(type, false)
+
+	for (new i = 0, n = ArraySize(PlayersPunishment[player]); i < n; i++) {
+		ArrayGetArray(PlayersPunishment[player], i, Punishment, sizeof Punishment);
+		if (Punishment[PunishmentStatus] != APS_PunishmentStatusActive) {
+			continue;
+		}
+		if (Punishment[PunishmentType] != type) {
+			return amnestyPlayer(player);
+		}
+	}
+
+	return false;
 }
 
 public bool:NativeGetPlayerPunishment(const plugin, const argc) {

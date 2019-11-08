@@ -4,12 +4,14 @@
 // #define HIDE_ME_IN_MENU
 
 #include <amxmodx>
-#include <time>
 #include <reapi>
 #include <grip>
 #include <gmx>
 #include <aps>
-#include <aps_mixed>
+#include <aps_time>
+
+#define ACTIVE_ITEM(%0) MENU_TAB + "\r%d. " + #%0
+#define INACTIVE_ITEM(%0) MENU_TAB + "\d%d. " + #%0
 
 #define destroy_handler(%1) if (Item[%1] > Handler_Invaild) DestroyForward(Item[%1])
 #define clear_item() arrayset(Item, 0 , sizeof Item)
@@ -92,7 +94,7 @@ public plugin_init() {
 
 	register_dictionary("aps_plmenu.txt");
 	register_dictionary("common.txt");
-	register_dictionary("time.txt");
+	register_dictionary("aps_time.txt");
 
 	RegisterHookChain(RG_CBasePlayer_SetClientUserInfoName, "CBasePlayer_SetClientUserInfoName_Post", true);
 
@@ -108,7 +110,6 @@ public plugin_init() {
 	Reasons = ArrayCreate(reason_s, 0);
 	Times = ArrayCreate(1, 0);
 
-	parseTimes("1i 1d 1w 1m 1y");
 	hook_cvar_change(create_cvar(
 		"aps_plmenu_times",
 		"1i 1d 1w 1m 1y"
@@ -116,9 +117,9 @@ public plugin_init() {
 }
 
 public plugin_cfg() {
-	ArrayPushCell(Times, 60);
-	ArrayPushCell(Times, 120);
-	TimesNum = ArraySize(Times);
+	new times[128];
+	get_cvar_string("aps_plmenu_times", times, charsmax(times));
+	parseTimes(times);
 
 
 	new fwdInited = CreateMultiForward("APS_PlMenu_Inited", ET_IGNORE);
@@ -188,11 +189,13 @@ public CmdPlayersMenu(const id) {
 	return PLUGIN_HANDLED;
 }
 
-public APS_PlMenu_Add(const type[], const title[], const handler, const resonHandler, const timeHandler, const extraHandler, const bool:needConfirm) {
+public APS_PlMenu_Add(const APS_Type:type, const title[], const handler, const resonHandler, const timeHandler, const extraHandler, const bool:needConfirm) {
 	clear_item();
+	if (!APS_IsValidType(type)) {
+		return -1;
+	}
 
-	new APS_Type:typeId = APS_GetTypeIndex(type);
-	Item[ItemType] = typeId;
+	Item[ItemType] = type;
 	copy(Item[ItemTitle], charsmax(Item[ItemTitle]), title);
 	Item[ItemHandler] = handler != Handler_Invaild ? handler : Handler_Default;
 	Item[ItemResonHandler] = resonHandler;
@@ -267,34 +270,31 @@ showPlayersMenu(const id, const page = 0) {
 
 		if (id == player) {
 			keys |= (1 << item);
-			len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \y[%s] ", MENU_TAB, ++item, TeamNames[team]);
+			len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\y[%s] ), ++item, TeamNames[team]);
 		} else if (is_user_hltv(player)) {
-			len += formatex(menu[len], charsmax(menu) - len, "%s\d[%d] [HLTV] ", MENU_TAB, ++item);
+			len += formatex(menu[len], charsmax(menu) - len, INACTIVE_ITEM([HLTV] ), ++item);
 		} else if (is_user_bot(player)) {
-			len += formatex(menu[len], charsmax(menu) - len, "%s\d[%d] [%s] [BOT] ", MENU_TAB, ++item, TeamNames[team]);
+			len += formatex(menu[len], charsmax(menu) - len, INACTIVE_ITEM([BOT] ), ++item, TeamNames[team]);
 		} else {
-//             flags = get_user_flags(player);
-//             if ((flags & ADMIN_IMMUNITY) && !superFlag) {
-//                 len += formatex(menu[len], charsmax(menu) - len, "%s\d[%d] [%s] [IMMUNITY] ", MENU_TAB, ++item, team);
-//             } else {
-				keys |= (1 << item);
-				len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \y[%s] ", MENU_TAB, ++item, TeamNames[team]);
-//             }
+			keys |= (1 << item);
+			len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\y[%s] ), ++item, TeamNames[team]);
 		}
 
 		len += formatex(menu[len], charsmax(menu) - len, " \w%s^n", Players[player][PlayerName]);
 	}
 
 	new tmp[15];
-	setc(tmp, 8 - (end - start), '^n');
+	setc(tmp, 8 - (end - start) + 1, '^n');
 	len += copy(menu[len], charsmax(menu) - len, tmp);
 
 	if (end < Players[id][PlayerNum]) {
 		keys |= MENU_KEY_9;
-		len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[9] \w%l^n%s\r[0] \w%l", MENU_TAB, "MORE", MENU_TAB, (firstPage ? "EXIT" : "BACK"));
+		len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), 9, "MORE");
 	} else {
-		len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%l", MENU_TAB, (firstPage ? "EXIT" : "BACK"));
+		len += formatex(menu[len], charsmax(menu) - len, "^n");
 	}
+
+	len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), 0, firstPage ? "EXIT" : "BACK");
 
 	show_menu(id, keys, menu, -1, "APS_PLAYERS_MENU");
 }
@@ -320,19 +320,20 @@ showItemsMenu(const id, const page = 0) {
 	for (new i = start, item; i < end; i++) {
 		get_item(i);
 		keys |= (1 << item);
-		len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \w%l^n", MENU_TAB, ++item, Item[ItemTitle]);
+		len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), ++item, Item[ItemTitle]);
 	}
 
 	new tmp[15];
-	setc(tmp, 8 - (end - start), '^n');
+	setc(tmp, 8 - (end - start) + 1, '^n');
 	len += copy(menu[len], charsmax(menu) - len, tmp);
 
 	if (end < num) {
 		keys |= MENU_KEY_9;
-		len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[9] \w%l^n%s\r[0] \w%l", MENU_TAB, "MORE", MENU_TAB, "BACK");
+		len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), 9, "MORE");
 	} else {
-		len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%l", MENU_TAB, "BACK");
+		len += formatex(menu[len], charsmax(menu) - len, "^n");
 	}
+	len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), 0, "BACK");
 
 	show_menu(id, keys, menu, -1, "APS_TYPES_MENU");
 }
@@ -358,19 +359,21 @@ showReasonsMenu(const id, const page = 0) {
 	for (new i = start, item; i < end; i++) {
 		get_reason(i);
 		keys |= (1 << item);
-		len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \w%s^n", MENU_TAB, ++item, Reason[ReasonTitle]);
+		len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%s^n), ++item, Reason[ReasonTitle]);
 	}
 
 	new tmp[15];
-	setc(tmp, 8 - (end - start), '^n');
+	setc(tmp, 8 - (end - start) + 1, '^n');
 	len += copy(menu[len], charsmax(menu) - len, tmp);
 
 	if (end < num) {
 		keys |= MENU_KEY_9;
-		len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[9] \w%l^n%s\r[0] \w%l", MENU_TAB, "MORE", MENU_TAB, "BACK");
+		len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), 9, "MORE");
 	} else {
-		len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%l", MENU_TAB, "BACK");
+		len += formatex(menu[len], charsmax(menu) - len, "^n");
 	}
+
+	len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), 0, "BACK");
 
 	show_menu(id, keys, menu, -1, "APS_REASONS_MENU");
 }
@@ -394,21 +397,22 @@ showTimesMenu(const id, const page = 0) {
 	for (new i = start, item, time, title[64]; i < end; i++) {
 		time = ArrayGetCell(Times, i);
 		keys |= (1 << item);
-
-		get_time_length(id, time, timeunit_seconds, title, charsmax(title));
-		len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \w%s^n", MENU_TAB, ++item, title);
+		aps_get_time_length(id, time, title, charsmax(title));
+		len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%s^n), ++item, title);
 	}
 
 	new tmp[15];
-	setc(tmp, 8 - (end - start), '^n');
+	setc(tmp, 8 - (end - start) + 1, '^n');
 	len += copy(menu[len], charsmax(menu) - len, tmp);
 
 	if (end < TimesNum) {
 		keys |= MENU_KEY_9;
-		len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[9] \w%l^n%s\r[0] \w%l", MENU_TAB, "MORE", MENU_TAB, "BACK");
+		len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), 9, "MORE");
 	} else {
-		len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%l", MENU_TAB, "BACK");
+		len += formatex(menu[len], charsmax(menu) - len, "^n");
 	}
+
+	len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), 0, "BACK");
 
 	show_menu(id, keys, menu, -1, "APS_TIMES_MENU");
 }
@@ -416,7 +420,7 @@ showTimesMenu(const id, const page = 0) {
 showExtraMenu(const id) {
 	#pragma unused id
 }
-#pragma unused showExtraMenu
+// #pragma unused showExtraMenu
 
 showConfirmMenu(const id) {
 	SetGlobalTransTarget(id);
@@ -433,14 +437,16 @@ showConfirmMenu(const id) {
 
 	if (Players[id][PlayerTime] >= 0) {
 		new time[64];
-		get_time_length(id, Players[id][PlayerTime], timeunit_seconds, time, charsmax(time));
+		aps_get_time_length(id, Players[id][PlayerTime], time, charsmax(time));
 		len += formatex(menu[len], charsmax(menu) - len, "%s\y%l\w: \y%s^n", MENU_TAB, "APS_MENU_TIME", time);
 	} else {
 		len += formatex(menu[len], charsmax(menu) - len, "%s\y%l\w: \r%l^n", MENU_TAB, "APS_MENU_TIME", "APS_MENU_FOREVER");
 	}
 
 	new keys = MENU_KEY_1 | MENU_KEY_2;
-	len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[1] \w%l^n%s\r[2] \w%l", MENU_TAB, "YES", MENU_TAB, "NO");
+	len += formatex(menu[len], charsmax(menu) - len, "^n^n");
+	len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), 1, "YES");
+	len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), 2, "NO");
 
 	show_menu(id, keys, menu, -1, "APS_CONFIRM_MENU");
 }

@@ -21,6 +21,7 @@ new Damage[] = {
 	0, 5, 10, 15, 20
 };
 
+new APS_Type:KickTypeId, APS_Type:SlapTypeId, APS_Type:SlayTypeId;
 new DamageNum = sizeof Damage;
 new Players[MAX_PLAYERS + 1];
 
@@ -55,14 +56,20 @@ public plugin_end() {
 	DestroyForward(Forwards[FWD_PlayerSlayed]);
 }
 
+public APS_Initing() {
+	KickTypeId = APS_RegisterType("kick");
+	SlapTypeId = APS_RegisterType("slap");
+	SlayTypeId = APS_RegisterType("slay");
+}
+
 public APS_PlMenu_Inited() {
 	APS_PlMenu_Add(
-		"kick", "APS_TYPE_KICK", 
+		KickTypeId, "APS_TYPE_KICK", 
 		APS_PlMenu_CreateHandler("HandlePlMenuKickAction"),
 		.timeHandler = APS_PlMenu_Handler_Invaild
 	);
 	APS_PlMenu_Add(
-		"slap", "APS_TYPE_SLAP",
+		SlapTypeId, "APS_TYPE_SLAP",
 		APS_PlMenu_CreateHandler("HandlePlMenuSlapAction"),
 		.resonHandler = APS_PlMenu_Handler_Invaild, 
 		.timeHandler = APS_PlMenu_Handler_Invaild, 
@@ -70,7 +77,7 @@ public APS_PlMenu_Inited() {
 		.needConfirm = false
 	);
 	APS_PlMenu_Add(
-		"slay", "APS_TYPE_SLAY",
+		SlayTypeId, "APS_TYPE_SLAY",
 		APS_PlMenu_CreateHandler("HandlePlMenuSlayAction"),
 		.resonHandler = APS_PlMenu_Handler_Invaild, 
 		.timeHandler = APS_PlMenu_Handler_Invaild, 

@@ -21,7 +21,7 @@ stock APS_TextIgnoreListDestroy() {
 
 stock bool:APS_TextIgnoreListPush(const message[]) {
 	if (APS_TextIgnoreList == Invalid_Trie) {
-		log_error(AMX_ERR_NONE, "Text ingore list not inited");
+		log_error(AMX_ERR_NONE, "Text ignore list not inited");
 		return false;
 	}
 	TrieSetCell(APS_TextIgnoreList, message, 1);
@@ -30,7 +30,7 @@ stock bool:APS_TextIgnoreListPush(const message[]) {
 
 stock bool:APS_TextIgnoreListCheck(const message[]) {
 	if (APS_TextIgnoreList == Invalid_Trie) {
-		log_error(AMX_ERR_NONE, "Text ingore list not inited");
+		log_error(AMX_ERR_NONE, "Text ignore list not inited");
 		return false;
 	}
 	return TrieKeyExists(APS_TextIgnoreList, message);
@@ -38,7 +38,7 @@ stock bool:APS_TextIgnoreListCheck(const message[]) {
 
 stock bool:APS_TextIgnoreListLoad(const path[]) {
 	if (APS_TextIgnoreList == Invalid_Trie) {
-		log_error(AMX_ERR_NONE, "Text ingore list not inited");
+		log_error(AMX_ERR_NONE, "Text ignore list not inited");
 		return false;
 	}
 

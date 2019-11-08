@@ -18,5 +18,5 @@ enum APS_PunisherType {
 enum APS_PunishmentStatus {
 	APS_PunishmentStatusActive,
 	APS_PunishmentStatusExpired,
-	APS_PunishmentStatusInactive
+	APS_PunishmentStatusAmnestied
 };

@@ -22,14 +22,14 @@ stock APS_PlMenu_DestroyHandler(APS_PlMenu_Handler:handler) {
 }
 
 stock bool:APS_PlMenu_Add(
-	const type[], const title[], 
+	const APS_Type:type, const title[], 
 	const APS_PlMenu_Handler:handler = APS_PlMenu_Handler_Default, 
 	const APS_PlMenu_Handler:resonHandler = APS_PlMenu_Handler_Default, 
 	const APS_PlMenu_Handler:timeHandler = APS_PlMenu_Handler_Default, 
 	const APS_PlMenu_Handler:extraHandler = APS_PlMenu_Handler_Invaild,
 	const bool:needConfirm = true
 ) {
-	new pluginID = APS_GetPluginID();
+	new pluginID = APS_PlMenu_GetPluginID();
 	if (pluginID == -1) {
 		return false;
 	}
@@ -41,7 +41,7 @@ stock bool:APS_PlMenu_Add(
 	if (callfunc_begin_i(func, pluginID) != 1) {
 		return false;
 	}
-	callfunc_push_str(type);
+	callfunc_push_int(_:type);
 	callfunc_push_str(title);
 	callfunc_push_int(_:handler);
 	callfunc_push_int(_:resonHandler);
@@ -54,7 +54,7 @@ stock bool:APS_PlMenu_Add(
 }
 
 stock bool:APS_PlMenu_NextStep(const admin, const value) {
-	new pluginID = APS_GetPluginID();
+	new pluginID = APS_PlMenu_GetPluginID();
 	if (pluginID == -1) {
 		return false;
 	}
@@ -74,7 +74,7 @@ stock bool:APS_PlMenu_NextStep(const admin, const value) {
 }
 
 stock bool:APS_PlMenu_PrevStep(const admin) {
-	new pluginID = APS_GetPluginID();
+	new pluginID = APS_PlMenu_GetPluginID();
 	if (pluginID == -1) {
 		return false;
 	}
@@ -93,7 +93,7 @@ stock bool:APS_PlMenu_PrevStep(const admin) {
 }
 
 stock APS_PlMenu_GetPlayer(const admin) {
-	new pluginID = APS_GetPluginID();
+	new pluginID = APS_PlMenu_GetPluginID();
 	if (pluginID == -1) {
 		return -1;
 	}
@@ -109,7 +109,7 @@ stock APS_PlMenu_GetPlayer(const admin) {
 	return callfunc_end();
 }
 
-stock APS_GetPluginID() {
+stock APS_PlMenu_GetPluginID() {
 	static pluginID = -1;
 	if (pluginID == -1) {
 		new plugin = get_plugin(-1);
