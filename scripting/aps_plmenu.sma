@@ -11,6 +11,9 @@
 #include <aps>
 #include <aps_mixed>
 
+#define ACTIVE_ITEM(%0) MENU_TAB + "\r%d. " + #%0
+#define INACTIVE_ITEM(%0) MENU_TAB + "\d%d. " + #%0
+
 #define destroy_handler(%1) if (Item[%1] > Handler_Invaild) DestroyForward(Item[%1])
 #define clear_item() arrayset(Item, 0 , sizeof Item)
 #define clear_reason() arrayset(Reason, 0 , sizeof Reason)
@@ -269,34 +272,31 @@ showPlayersMenu(const id, const page = 0) {
 
 		if (id == player) {
 			keys |= (1 << item);
-			len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \y[%s] ", MENU_TAB, ++item, TeamNames[team]);
+			len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\y[%s] ), ++item, TeamNames[team]);
 		} else if (is_user_hltv(player)) {
-			len += formatex(menu[len], charsmax(menu) - len, "%s\d[%d] [HLTV] ", MENU_TAB, ++item);
+			len += formatex(menu[len], charsmax(menu) - len, INACTIVE_ITEM([HLTV] ), ++item);
 		} else if (is_user_bot(player)) {
-			len += formatex(menu[len], charsmax(menu) - len, "%s\d[%d] [%s] [BOT] ", MENU_TAB, ++item, TeamNames[team]);
+			len += formatex(menu[len], charsmax(menu) - len, INACTIVE_ITEM([BOT] ), ++item, TeamNames[team]);
 		} else {
-//             flags = get_user_flags(player);
-//             if ((flags & ADMIN_IMMUNITY) && !superFlag) {
-//                 len += formatex(menu[len], charsmax(menu) - len, "%s\d[%d] [%s] [IMMUNITY] ", MENU_TAB, ++item, team);
-//             } else {
-				keys |= (1 << item);
-				len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \y[%s] ", MENU_TAB, ++item, TeamNames[team]);
-//             }
+			keys |= (1 << item);
+			len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\y[%s] ), ++item, TeamNames[team]);
 		}
 
 		len += formatex(menu[len], charsmax(menu) - len, " \w%s^n", Players[player][PlayerName]);
 	}
 
 	new tmp[15];
-	setc(tmp, 8 - (end - start), '^n');
+	setc(tmp, 8 - (end - start) + 1, '^n');
 	len += copy(menu[len], charsmax(menu) - len, tmp);
 
 	if (end < Players[id][PlayerNum]) {
 		keys |= MENU_KEY_9;
-		len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[9] \w%l^n%s\r[0] \w%l", MENU_TAB, "MORE", MENU_TAB, (firstPage ? "EXIT" : "BACK"));
+		len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), 9, "MORE");
 	} else {
-		len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%l", MENU_TAB, (firstPage ? "EXIT" : "BACK"));
+		len += formatex(menu[len], charsmax(menu) - len, "^n");
 	}
+
+	len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), 0, firstPage ? "EXIT" : "BACK");
 
 	show_menu(id, keys, menu, -1, "APS_PLAYERS_MENU");
 }
@@ -322,19 +322,20 @@ showItemsMenu(const id, const page = 0) {
 	for (new i = start, item; i < end; i++) {
 		get_item(i);
 		keys |= (1 << item);
-		len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \w%l^n", MENU_TAB, ++item, Item[ItemTitle]);
+		len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), ++item, Item[ItemTitle]);
 	}
 
 	new tmp[15];
-	setc(tmp, 8 - (end - start), '^n');
+	setc(tmp, 8 - (end - start) + 1, '^n');
 	len += copy(menu[len], charsmax(menu) - len, tmp);
 
 	if (end < num) {
 		keys |= MENU_KEY_9;
-		len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[9] \w%l^n%s\r[0] \w%l", MENU_TAB, "MORE", MENU_TAB, "BACK");
+		len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), 9, "MORE");
 	} else {
-		len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%l", MENU_TAB, "BACK");
+		len += formatex(menu[len], charsmax(menu) - len, "^n");
 	}
+	len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), 0, "BACK");
 
 	show_menu(id, keys, menu, -1, "APS_TYPES_MENU");
 }
@@ -360,19 +361,21 @@ showReasonsMenu(const id, const page = 0) {
 	for (new i = start, item; i < end; i++) {
 		get_reason(i);
 		keys |= (1 << item);
-		len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \w%s^n", MENU_TAB, ++item, Reason[ReasonTitle]);
+		len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%s^n), ++item, Reason[ReasonTitle]);
 	}
 
 	new tmp[15];
-	setc(tmp, 8 - (end - start), '^n');
+	setc(tmp, 8 - (end - start) + 1, '^n');
 	len += copy(menu[len], charsmax(menu) - len, tmp);
 
 	if (end < num) {
 		keys |= MENU_KEY_9;
-		len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[9] \w%l^n%s\r[0] \w%l", MENU_TAB, "MORE", MENU_TAB, "BACK");
+		len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), 9, "MORE");
 	} else {
-		len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%l", MENU_TAB, "BACK");
+		len += formatex(menu[len], charsmax(menu) - len, "^n");
 	}
+
+	len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), 0, "BACK");
 
 	show_menu(id, keys, menu, -1, "APS_REASONS_MENU");
 }
@@ -398,19 +401,21 @@ showTimesMenu(const id, const page = 0) {
 		keys |= (1 << item);
 
 		get_time_length(id, time, timeunit_seconds, title, charsmax(title));
-		len += formatex(menu[len], charsmax(menu) - len, "%s\r[%d] \w%s^n", MENU_TAB, ++item, title);
+		len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%s^n), ++item, title);
 	}
 
 	new tmp[15];
-	setc(tmp, 8 - (end - start), '^n');
+	setc(tmp, 8 - (end - start) + 1, '^n');
 	len += copy(menu[len], charsmax(menu) - len, tmp);
 
 	if (end < TimesNum) {
 		keys |= MENU_KEY_9;
-		len += formatex(menu[len], charsmax(menu) - len, "^n%s\r[9] \w%l^n%s\r[0] \w%l", MENU_TAB, "MORE", MENU_TAB, "BACK");
+		len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), 9, "MORE");
 	} else {
-		len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[0] \w%l", MENU_TAB, "BACK");
+		len += formatex(menu[len], charsmax(menu) - len, "^n");
 	}
+
+	len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), 0, "BACK");
 
 	show_menu(id, keys, menu, -1, "APS_TIMES_MENU");
 }
@@ -418,7 +423,7 @@ showTimesMenu(const id, const page = 0) {
 showExtraMenu(const id) {
 	#pragma unused id
 }
-#pragma unused showExtraMenu
+// #pragma unused showExtraMenu
 
 showConfirmMenu(const id) {
 	SetGlobalTransTarget(id);
@@ -442,7 +447,9 @@ showConfirmMenu(const id) {
 	}
 
 	new keys = MENU_KEY_1 | MENU_KEY_2;
-	len += formatex(menu[len], charsmax(menu) - len, "^n^n%s\r[1] \w%l^n%s\r[2] \w%l", MENU_TAB, "YES", MENU_TAB, "NO");
+	len += formatex(menu[len], charsmax(menu) - len, "^n^n");
+	len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), 1, "YES");
+	len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), 2, "NO");
 
 	show_menu(id, keys, menu, -1, "APS_CONFIRM_MENU");
 }

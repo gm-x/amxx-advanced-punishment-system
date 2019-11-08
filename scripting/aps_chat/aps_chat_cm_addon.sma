@@ -45,5 +45,8 @@ public APS_PlayerAmnestying(const id, const APS_Type:type) {
 }
 
 public cm_player_send_message(const id) {
-	return Blocked[id] ? MESSAGE_BLOCKED : MESSAGE_IGNORED;
+	if (!Blocked[id]) {
+		return MESSAGE_IGNORED;
+	}
+	return MESSAGE_BLOCKED;
 }

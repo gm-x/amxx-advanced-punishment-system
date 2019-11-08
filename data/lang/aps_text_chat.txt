@@ -1,0 +1,5 @@
+[en]
+APS_TYPE_TEXT_CHAT=Text Chat
+
+[ru]
+APS_TYPE_TEXT_CHAT=Текстовый Чат
