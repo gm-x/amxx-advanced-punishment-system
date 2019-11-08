@@ -35,7 +35,6 @@ enum _:slap_s{
 new SlapData[MAX_PLAYERS + 1][slap_s];
 
 new APS_Type:BanTypeID, APS_Type:VoiceChatTypeID, APS_Type:TextChatTypeID;
-#pragma unused VoiceChatTypeID, TextChatTypeID
 
 public plugin_init() {
 	register_plugin("[APS] Mixed", "0.1.0", "GM-X Team");
@@ -85,20 +84,12 @@ public APS_PlayerPunished(const player, const APS_Type:type) {
 
 	if (type == BanTypeID) {
 		playerBanned(player);
+	} else if (type == VoiceChatTypeID) {
+		playerBlockedVoice(player);
+	} else if (type == TextChatTypeID) {
+		playerBlockedText(player);
 	}
 }
-
-/*
-public APS_PlayerBlockedChat(const admin, const id, const time, const reason[], const details[], const extra) {
-	if ((extra & (APS_Chat_Voice | APS_Chat_Text)) == (APS_Chat_Voice | APS_Chat_Text)) {
-		log_amx("Punishment: %N block voice and text chat %N (time %d mins.) (reason ^"%s^") (details ^"%s^")", admin, id, time, reason, details);
-	} else if (extra & APS_Chat_Voice) {
-		log_amx("Punishment: %N block voice chat %N (time %d mins.) (reason ^"%s^") (details ^"%s^")", admin, id, time, reason, details);
-	} else if (extra & APS_Chat_Text) {
-		log_amx("Punishment: %N block text chat %N (time %d mins.) (reason ^"%s^") (details ^"%s^")", admin, id, time, reason, details);
-	}
-}
-*/
 
 public APS_PlayerKicked(const admin, const id, const reason[]) {
 	log_amx("Kick: %N kick %N (reason ^"%s^")", admin, id, reason);
@@ -205,6 +196,7 @@ playerBanned(const id) {
 	new reason[APS_MAX_REASON_LENGTH], details[APS_MAX_DETAILS_LENGTH];
 	APS_GetReason(reason, charsmax(reason));
 	APS_GetDetails(details, charsmax(details));
+
 	log_amx("Ban: %N banned %N (time %d sec.) (reason ^"%s^") (details ^"%s^")", admin, id, time, reason, details);
 
 	if (admin == 0) {
@@ -228,6 +220,76 @@ playerBanned(const id) {
 			FOREACH_PLAYERS() {
 				aps_get_time_length(player, time, timeStr, charsmax(timeStr));
 				client_print_color(player, id, "%l", "APS_LOG_BAN", player, timeStr, reason);
+			}
+		}
+	}
+}
+
+playerBlockedVoice(const id) {
+	new admin = APS_GetPunisherId();
+	new time = APS_GetTime();
+	new reason[APS_MAX_REASON_LENGTH], details[APS_MAX_DETAILS_LENGTH];
+	APS_GetReason(reason, charsmax(reason));
+	APS_GetDetails(details, charsmax(details));
+
+	log_amx("Voice Chat: %N blocked %N (time %d sec.) (reason ^"%s^") (details ^"%s^")", admin, id, time, reason, details);
+
+	if (admin == 0) {
+		if (findPlayersForActivity(true, true)) {
+			new timeStr[64];
+			FOREACH_PLAYERS() {
+				aps_get_time_length(player, time, timeStr, charsmax(timeStr));
+				client_print_color(player, id, "%l", "APS_LOG_VOICE_CHAT_SERVER", player, timeStr, reason);
+			}
+		}
+	} else {
+		if (findPlayersForActivity(true, false)) {
+			new timeStr[64];
+			FOREACH_PLAYERS() {
+				aps_get_time_length(player, time, timeStr, charsmax(timeStr));
+				client_print_color(player, id, "%l", "APS_LOG_VOICE_CHAT_ADMIN", admin, player, timeStr, reason);
+			}
+		}
+		if (findPlayersForActivity(false, false)) {
+			new timeStr[64];
+			FOREACH_PLAYERS() {
+				aps_get_time_length(player, time, timeStr, charsmax(timeStr));
+				client_print_color(player, id, "%l", "APS_LOG_VOICE_CHAT", player, timeStr, reason);
+			}
+		}
+	}
+}
+
+playerBlockedText(const id) {
+	new admin = APS_GetPunisherId();
+	new time = APS_GetTime();
+	new reason[APS_MAX_REASON_LENGTH], details[APS_MAX_DETAILS_LENGTH];
+	APS_GetReason(reason, charsmax(reason));
+	APS_GetDetails(details, charsmax(details));
+
+	log_amx("Text Chat: %N blocked %N (time %d sec.) (reason ^"%s^") (details ^"%s^")", admin, id, time, reason, details);
+
+	if (admin == 0) {
+		if (findPlayersForActivity(true, true)) {
+			new timeStr[64];
+			FOREACH_PLAYERS() {
+				aps_get_time_length(player, time, timeStr, charsmax(timeStr));
+				client_print_color(player, id, "%l", "APS_LOG_TEXT_CHAT_SERVER", player, timeStr, reason);
+			}
+		}
+	} else {
+		if (findPlayersForActivity(true, false)) {
+			new timeStr[64];
+			FOREACH_PLAYERS() {
+				aps_get_time_length(player, time, timeStr, charsmax(timeStr));
+				client_print_color(player, id, "%l", "APS_LOG_TEXT_CHAT_ADMIN", admin, player, timeStr, reason);
+			}
+		}
+		if (findPlayersForActivity(false, false)) {
+			new timeStr[64];
+			FOREACH_PLAYERS() {
+				aps_get_time_length(player, time, timeStr, charsmax(timeStr));
+				client_print_color(player, id, "%l", "APS_LOG_TEXT_CHAT", player, timeStr, reason);
 			}
 		}
 	}
