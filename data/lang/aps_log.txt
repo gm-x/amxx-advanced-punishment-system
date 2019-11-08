@@ -1,23 +1,29 @@
 [en]
 APS_LOG_PREFIX=^1[^4APS^1]
-APS_LOG_KICK_SERVER=^1Server kick ^3%n^1. Reason: ^4%s
-APS_LOG_KICK_ADMIN=^1Admin ^4%n ^1kick ^3%n^1. Reason: ^4%s
-APS_LOG_KICK=^1Admin kick ^3%n^1. Reason: ^4%s
-APS_LOG_SLAP_SERVER=^1Server slap ^3%n ^1with ^4%d ^1damage
-APS_LOG_SLAP_ADMIN=^1Admin ^4%n ^1slap ^3%n ^1with ^4%d ^1damage
-APS_LOG_SLAP=^1Admin slap ^3%n ^1with ^4%d ^1damage
-APS_LOG_SLAY_SERVER=^1Server kill ^3%n
-APS_LOG_SLAY_ADMIN=^1Admin ^4%n ^1kill ^3%n
-APS_LOG_SLAY=^1Admin kill ^3%n
+APS_LOG_KICK_SERVER=^1Server kick ^3%n^1. Reason: ^4%s^1.
+APS_LOG_KICK_ADMIN=^1Admin ^4%n ^1kick ^3%n^1. Reason: ^4%s^1.
+APS_LOG_KICK=^1Admin kick ^3%n^1. Reason: ^4%s^1.
+APS_LOG_SLAP_SERVER=^1Server slap ^3%n ^4%d ^1times ^1with ^4%d ^1damage.
+APS_LOG_SLAP_ADMIN=^1Admin ^4%n ^1slap ^3%n ^4%d ^1times ^1with ^4%d ^1damage.
+APS_LOG_SLAP=^1Admin slap ^3%n ^4%d ^1times ^1with ^4%d ^1damage.
+APS_LOG_SLAY_SERVER=^1Server kill ^3%n^1.
+APS_LOG_SLAY_ADMIN=^1Admin ^4%n ^1kill ^3%n^1.
+APS_LOG_SLAY=^1Admin kill ^3%n^1.
+APS_LOG_BAN_SERVER=^1Server ^1banned ^3%n^1. Time: ^4%s^1. Reason: ^4%s^1.
+APS_LOG_BAN_ADMIN=^1Admin ^4%n ^1banned ^3%n^1. Time: ^4%s^1. Reason: ^4%s^1.
+APS_LOG_BAN=^1Admin 1banned ^3%n^1. Time: ^4%s^1. Reason: ^4%s^1.
 
 [ru]
 APS_LOG_PREFIX=^1[^4APS^1]
 APS_LOG_KICK_SERVER=^1Сервер кикнул ^3%n^1. Причина: ^4%s
 APS_LOG_KICK_ADMIN=^1Администратор ^4%n ^1кикнул ^3%n^1. Причина: ^4%s
 APS_LOG_KICK=^1Администратор кикнул ^3%n^1. Причина: ^4%s
-APS_LOG_SLAP_SERVER="^1Сервер стукнул ^3%n ^1с ^4%d ^1урона
-APS_LOG_SLAP_ADMIN=^1Администратор ^4%n ^1стукнул ^3%n ^1c ^4%d ^1урона
-APS_LOG_SLAP=^1Администратор стукнул ^3%n ^1c ^4%d ^1урона
+APS_LOG_SLAP_SERVER="^1Сервер стукнул ^3%n ^4%d ^1раза ^1с ^4%d ^1урона
+APS_LOG_SLAP_ADMIN=^1Администратор ^4%n ^1стукнул ^3%n ^4%d ^1раза ^1c ^4%d ^1урона
+APS_LOG_SLAP=^1Администратор стукнул ^3%n ^4%d ^1times ^1c ^4%d ^1урона
 APS_LOG_SLAY_SERVER=^1Сервер убил ^3%n
 APS_LOG_SLAY_ADMIN=^1Администратор ^4%n ^1убил ^3%n
 APS_LOG_SLAY=^1Администратор убил ^3%n
+APS_LOG_BAN_SERVER=^1Сервер ^1забанил ^3%n^1. Время: ^4%s^1. Причина: ^4%s^1.
+APS_LOG_BAN_ADMIN=^1Администратор ^4%n ^1забанил ^3%n^1. Время: ^4%s^1. Причина: ^4%s^1.
+APS_LOG_BAN=^1Администратор 1забанил ^3%n^1. Время: ^4%s^1. Причина: ^4%s^1.
