@@ -5,7 +5,7 @@
 new APS_Type:TypeId;
 
 public plugin_init() {
-	register_plugin("[APS] Chat VTC", "0.1.1", "GM-X Team");
+	register_plugin("[APS] Chat VTC", APS_VERSION_STR, "GM-X Team");
 }
 
 public APS_Inited() {

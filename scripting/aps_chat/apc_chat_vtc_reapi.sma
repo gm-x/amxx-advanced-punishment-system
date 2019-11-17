@@ -5,7 +5,7 @@
 new APS_Type:TypeId;
 
 public plugin_init() {
-	register_plugin("[APS] Chat VTC ReAPI", "0.1.1", "GM-X Team");
+	register_plugin("[APS] Chat VTC ReAPI", APS_VERSION_STR, "GM-X Team");
 
 	if (!has_vtc()) {
 		set_fail_state("[APS CHAT VTC REAPI] VoiceTranscoder not found");

@@ -90,7 +90,7 @@ new Array:Times, TimesNum;
 new Players[MAX_PLAYERS + 1][player_s];
 
 public plugin_init() {
-	register_plugin("[APS] Players Menu", "0.1.0", "GM-X Team");
+	register_plugin("[APS] Players Menu", APS_VERSION_STR, "GM-X Team");
 
 	register_dictionary("aps_plmenu.txt");
 	register_dictionary("common.txt");

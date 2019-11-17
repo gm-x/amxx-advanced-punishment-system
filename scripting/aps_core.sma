@@ -5,14 +5,6 @@
 #include <gmx>
 #include <aps>
 
-#define APS_VERSION \
-	fmt( \
-		"%d.%d.%d",    \
-		APS_MAJOR_VERSION, \
-		APS_MINOR_VERSION, \
-		APS_MAINTENANCE_VERSION \
-	)
-
 #define CHECK_NATIVE_TYPE(%1,%2) \
 	if (0 > %1 || %1 >= TypesNum) { \
 		return %2; \
@@ -59,7 +51,7 @@ new Array:PlayersPunishment[MAX_PLAYERS + 1];
 new PluginId;
 
 public plugin_init() {
-	PluginId = register_plugin("[APS] Core", APS_VERSION, "GM-X Team");
+	PluginId = register_plugin("[APS] Core", APS_VERSION_STR, "GM-X Team");
 	Types = ArrayCreate(APS_MAX_TYPE_LENGTH, 0);
 	for (new i = 1; i <= MAX_PLAYERS; i++) {
 		PlayersPunishment[i] = ArrayCreate(PunishmentStruc, 0);

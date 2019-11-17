@@ -5,7 +5,7 @@
 new APS_Type:TypeId;
 
 public plugin_init() {
-	register_plugin("[APS] Voice Chat", "0.1.1", "GM-X Team");
+	register_plugin("[APS] Voice Chat", APS_VERSION_STR, "GM-X Team");
 	register_dictionary("aps_voice_chat.txt");
 
 	register_concmd("amx_mute", "CmdMute", ADMIN_CHAT);
