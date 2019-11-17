@@ -5,7 +5,7 @@
 new APS_Type:TypeId;
 
 public plugin_init() {
-	register_plugin("[APS] Text Chat", "0.1.1", "GM-X Team");
+	register_plugin("[APS] Text Chat", APS_VERSION_STR, "GM-X Team");
 	register_dictionary("aps_text_chat.txt");
 
 	register_concmd("amx_gag", "CmdGag", ADMIN_CHAT);

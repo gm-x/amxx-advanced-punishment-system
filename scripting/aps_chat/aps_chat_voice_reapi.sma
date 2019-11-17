@@ -6,7 +6,7 @@ new APS_Type:TypeId;
 new bool:Muted[MAX_PLAYERS + 1];
 
 public plugin_init() {
-	register_plugin("[APS] Chat Voice ReAPI", "0.1.2", "GM-X Team");
+	register_plugin("[APS] Chat Voice ReAPI", APS_VERSION_STR, "GM-X Team");
 	RegisterHookChain(RG_CSGameRules_CanPlayerHearPlayer, "CSGameRules_CanPlayerHearPlayer_Pre", false);
 }
 

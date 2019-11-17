@@ -37,7 +37,7 @@ new SlapData[MAX_PLAYERS + 1][slap_s];
 new APS_Type:BanTypeID, APS_Type:VoiceChatTypeID, APS_Type:TextChatTypeID;
 
 public plugin_init() {
-	register_plugin("[APS] Mixed", "0.1.0", "GM-X Team");
+	register_plugin("[APS] Mixed", APS_VERSION_STR, "GM-X Team");
 
 	register_dictionary("aps_log.txt");
 	register_dictionary("aps_time.txt");

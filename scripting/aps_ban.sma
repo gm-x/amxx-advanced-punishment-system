@@ -13,7 +13,7 @@ new Forwards[FWD], FwdReturn;
 new APS_Type:TypeId;
 
 public plugin_init() {
-	register_plugin("[APS] Ban", "0.1.0", "GM-X Team");
+	register_plugin("[APS] Ban", APS_VERSION_STR, "GM-X Team");
 
 	register_dictionary("aps_ban.txt");
 	register_dictionary("aps_time.txt");

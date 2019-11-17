@@ -6,16 +6,11 @@
 
 #include <aps_consts>
 #include <aps_stocks>
-
-#define APS_MAJOR_VERSION			0
-#define APS_MINOR_VERSION			1
-#define APS_MAINTENANCE_VERSION		3
+#include <aps_version>
 
 enum APS_Type {
 	APS_InvalidType = -1,
 };
-
-stock const APS_API_VERSION_STR[] = "0.1.0";
 
 forward APS_Initing();
 forward APS_Inited();

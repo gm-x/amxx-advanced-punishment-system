@@ -26,7 +26,7 @@ new DamageNum = sizeof Damage;
 new Players[MAX_PLAYERS + 1];
 
 public plugin_init() {
-	register_plugin("[APS] Mixed", "0.1.0", "GM-X Team");
+	register_plugin("[APS] Mixed", APS_VERSION_STR, "GM-X Team");
 	register_dictionary("aps_mixed.txt");
 
 	// register_dictionary("admincmd.txt");

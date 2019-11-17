@@ -12,7 +12,7 @@ public plugin_precache() {
 }
 
 public plugin_init() {
-	register_plugin("[APS] Chat CM Addon", "0.1.0", "GM-X Team");
+	register_plugin("[APS] Chat CM Addon", APS_VERSION_STR, "GM-X Team");
 
 	APS_TextIgnoreListInit();
 }
