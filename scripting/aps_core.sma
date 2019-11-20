@@ -263,7 +263,10 @@ bool:punishPlayer(const player) {
 		get_user_name(player, nick, charsmax(nick));
 		get_user_ip(player, ip, charsmax(ip), 1);
 
-		new emulator = has_reunion() ? REU_GetProtocol(player) : 0;
+		new emulator = 0;
+		if (has_reunion()) {
+			emulator = _:REU_GetAuthtype(player);
+		}
 
 		grip_json_object_set_number(request, "emulator", emulator);
 		grip_json_object_set_string(request, "steamid", steamid);
