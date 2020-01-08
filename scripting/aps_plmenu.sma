@@ -7,6 +7,7 @@
 #include <reapi>
 #include <grip>
 #include <gmx>
+#include <gmx_cache>
 #include <aps>
 #include <aps_time>
 
@@ -164,8 +165,13 @@ public HooCvarTimes(const pcvar, const oldValue[], const newValue[]) {
 public APS_PlMenu_Main() {}
 
 public GMX_Init() {
-	// TODO: Cache reasons
-	GMX_MakeRequest("punish/reasons", Invalid_GripJSONValue, "OnReasonsResponse");
+	new GripJSONValue:data;
+	if (GMX_CacheLoad("reasons", data)) {
+		parseReasons(data);
+		grip_destroy_json_value(data);
+	} else {
+		GMX_MakeRequest("punish/reasons", Invalid_GripJSONValue, "OnReasonsResponse");
+	}
 }
 
 public OnReasonsResponse(const GmxResponseStatus:status, const GripJSONValue:data, const userid) {
@@ -174,20 +180,8 @@ public OnReasonsResponse(const GmxResponseStatus:status, const GripJSONValue:dat
 	}
 
 	new GripJSONValue:reasons = grip_json_object_get_value(data, "reasons");
-	for (new i = 0, n = grip_json_array_get_count(reasons), GripJSONValue:element, GripJSONValue:time; i < n; i++) {
-		element = grip_json_array_get_value(reasons, i);
-		if (grip_json_get_type(element) == GripJSONObject) {
-			clear_reason();
-
-			time = grip_json_object_get_value(element, "time");
-			Reason[ReasonTime] = grip_json_get_type(time) != GripJSONNull ? grip_json_get_number(time) : -1;
-			grip_destroy_json_value(time);
-			grip_json_object_get_string(element, "title", Reason[ReasonTitle], charsmax(Reason[ReasonTitle]));
-
-			ArrayPushArray(Reasons, Reason, sizeof Reason);
-		}
-		grip_destroy_json_value(element);
-	}
+	parseReasons(reasons);
+	GMX_CacheSave("reasons", reasons);
 	grip_destroy_json_value(reasons);
 }
 
@@ -784,6 +778,23 @@ clearPlayer(const id) {
 	disable_player_default(id, Index_Reason);
 	disable_player_default(id, Index_Time);
 	disable_player_default(id, Index_Extra);
+}
+
+parseReasons(const GripJSONValue:data) {
+	for (new i = 0, n = grip_json_array_get_count(data), GripJSONValue:element, GripJSONValue:time; i < n; i++) {
+		element = grip_json_array_get_value(data, i);
+		if (grip_json_get_type(element) == GripJSONObject) {
+			clear_reason();
+
+			time = grip_json_object_get_value(element, "time");
+			Reason[ReasonTime] = grip_json_get_type(time) != GripJSONNull ? grip_json_get_number(time) : -1;
+			grip_destroy_json_value(time);
+			grip_json_object_get_string(element, "title", Reason[ReasonTitle], charsmax(Reason[ReasonTitle]));
+
+			ArrayPushArray(Reasons, Reason, sizeof Reason);
+		}
+		grip_destroy_json_value(element);
+	}
 }
 
 stock getItemByType(const APS_Type:type) {
