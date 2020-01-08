@@ -10,7 +10,7 @@ enum FWD {
 
 new Forwards[FWD], FwdReturn;
 
-new APS_Type:TypeId;
+new APS_Type:TypeId, APS_PlMenu_Item:ItemId = APS_PlMenu_InvalidItem;
 
 public plugin_init() {
 	register_plugin("[APS] Ban", APS_VERSION_STR, "GM-X Team");
@@ -19,6 +19,7 @@ public plugin_init() {
 	register_dictionary("aps_time.txt");
 
 	register_concmd("aps_ban", "CmdBan", ADMIN_BAN);
+	register_concmd("amx_banmenu", "CmdMenu", ADMIN_BAN);
 	Forwards[FWD_PlayerBanKick] = CreateMultiForward("APS_PlayerBanKick", ET_STOP, FP_CELL);
 }
 
@@ -36,7 +37,7 @@ public APS_Initing() {
 }
 
 public APS_PlMenu_Inited() {
-	APS_PlMenu_Add(TypeId, "APS_TYPE_BAN");
+	ItemId = APS_PlMenu_Add(TypeId, "APS_TYPE_BAN");
 }
 
 public HandlePlMenuAction(const admin, const player, const reason[], const time) {
@@ -66,7 +67,7 @@ public TaskKick(const id) {
 public CmdBan(const id, const level) {
 	enum { arg_player = 1, arg_time, arg_reason, arg_details };
 
-	if(~get_user_flags(id) & level) {
+	if (~get_user_flags(id) & level) {
 		console_print(id, "You have not access to this command!");
 		return PLUGIN_HANDLED;
 	}
@@ -92,6 +93,16 @@ public CmdBan(const id, const level) {
 
 	APS_PunishPlayer(player, TypeId, time, reason, details, id);
 
+	return PLUGIN_HANDLED;
+}
+
+public CmdMenu(const id, const level) {
+	if(~get_user_flags(id) & level) {
+		console_print(id, "You have not access to this command!");
+		return PLUGIN_HANDLED;
+	}
+
+	APS_PlMenu_Show(id, .item = ItemId);
 	return PLUGIN_HANDLED;
 }
 

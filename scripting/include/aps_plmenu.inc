@@ -3,6 +3,10 @@
 #endif
 #define _aps_plmenu_included
 
+enum APS_PlMenu_Item {
+	APS_PlMenu_InvalidItem = -1,
+};
+
 enum APS_PlMenu_Handler {
 	APS_PlMenu_Handler_Default = -2,
 	APS_PlMenu_Handler_Invaild = -1,
@@ -21,7 +25,7 @@ stock APS_PlMenu_DestroyHandler(APS_PlMenu_Handler:handler) {
 	}
 }
 
-stock bool:APS_PlMenu_Add(
+stock APS_PlMenu_Item:APS_PlMenu_Add(
 	const APS_Type:type, const title[], 
 	const APS_PlMenu_Handler:handler = APS_PlMenu_Handler_Default, 
 	const APS_PlMenu_Handler:resonHandler = APS_PlMenu_Handler_Default, 
@@ -31,15 +35,15 @@ stock bool:APS_PlMenu_Add(
 ) {
 	new pluginID = APS_PlMenu_GetPluginID();
 	if (pluginID == -1) {
-		return false;
+		return APS_PlMenu_InvalidItem;
 	}
 	new func = get_func_id("APS_PlMenu_Add", pluginID);
 	if (func == -1) {
-		return false;
+		return APS_PlMenu_InvalidItem;
 	}
 	
 	if (callfunc_begin_i(func, pluginID) != 1) {
-		return false;
+		return APS_PlMenu_InvalidItem;
 	}
 	callfunc_push_int(_:type);
 	callfunc_push_str(title);
@@ -48,9 +52,7 @@ stock bool:APS_PlMenu_Add(
 	callfunc_push_int(_:timeHandler);
 	callfunc_push_int(_:extraHandler);
 	callfunc_push_int(_:needConfirm);
-	callfunc_end();
-	
-	return true;
+	return APS_PlMenu_Item:callfunc_end();
 }
 
 stock bool:APS_PlMenu_NextStep(const admin, const value) {
@@ -107,6 +109,28 @@ stock APS_PlMenu_GetPlayer(const admin) {
 	}
 	callfunc_push_int(admin);
 	return callfunc_end();
+}
+
+stock bool:APS_PlMenu_Show(const admin, const player = 0, const APS_PlMenu_Item:item = APS_PlMenu_InvalidItem, const reason = -1, const time = -1, const extra = 0) {
+	new pluginID = APS_PlMenu_GetPluginID();
+	if (pluginID == -1) {
+		return false;
+	}
+	new func = get_func_id("APS_PlMenu_Show", pluginID);
+	if (func == -1) {
+		return false;
+	}
+	
+	if (callfunc_begin_i(func, pluginID) != 1) {
+		return false;
+	}
+	callfunc_push_int(admin);
+	callfunc_push_int(player);
+	callfunc_push_int(_:item);
+	callfunc_push_int(reason);
+	callfunc_push_int(time);
+	callfunc_push_int(extra);
+	return bool:callfunc_end();
 }
 
 stock APS_PlMenu_GetPluginID() {

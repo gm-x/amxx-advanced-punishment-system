@@ -22,6 +22,7 @@ new Damage[] = {
 };
 
 new APS_Type:KickTypeId, APS_Type:SlapTypeId, APS_Type:SlayTypeId;
+new APS_PlMenu_Item:KickItemId = APS_PlMenu_InvalidItem, APS_PlMenu_Item:SlapItemId = APS_PlMenu_InvalidItem, APS_PlMenu_Item:SlayItemId = APS_PlMenu_InvalidItem;
 new DamageNum = sizeof Damage;
 new Players[MAX_PLAYERS + 1];
 
@@ -36,6 +37,10 @@ public plugin_init() {
 	register_concmd("amx_kick", "CmdKick", ADMIN_KICK);
 	register_concmd("amx_slap", "CmdSlap", ADMIN_SLAY);
 	register_concmd("amx_slay", "CmdSlay", ADMIN_SLAY);
+
+	register_concmd("amx_kickmenu", "CmdMenuKick", ADMIN_KICK);
+	register_concmd("amx_slapmenu", "CmdMenuSlap", ADMIN_SLAY);
+	register_concmd("amx_slaymenu", "CmdMenuSlay", ADMIN_SLAY);
 
 	register_menucmd(register_menuid("APS_SLAP_MENU"), 1023, "HandleSlapMenu");
 
@@ -63,12 +68,12 @@ public APS_Initing() {
 }
 
 public APS_PlMenu_Inited() {
-	APS_PlMenu_Add(
+	KickItemId = APS_PlMenu_Add(
 		KickTypeId, "APS_TYPE_KICK", 
 		APS_PlMenu_CreateHandler("HandlePlMenuKickAction"),
 		.timeHandler = APS_PlMenu_Handler_Invaild
 	);
-	APS_PlMenu_Add(
+	SlapItemId = APS_PlMenu_Add(
 		SlapTypeId, "APS_TYPE_SLAP",
 		APS_PlMenu_CreateHandler("HandlePlMenuSlapAction"),
 		.resonHandler = APS_PlMenu_Handler_Invaild, 
@@ -76,7 +81,7 @@ public APS_PlMenu_Inited() {
 		.extraHandler = APS_PlMenu_Handler_Invaild,
 		.needConfirm = false
 	);
-	APS_PlMenu_Add(
+	SlayItemId = APS_PlMenu_Add(
 		SlayTypeId, "APS_TYPE_SLAY",
 		APS_PlMenu_CreateHandler("HandlePlMenuSlayAction"),
 		.resonHandler = APS_PlMenu_Handler_Invaild, 
@@ -222,6 +227,36 @@ public CmdSlay(const id, const level) {
 	} else {
 		console_print(id, "Player ^"%n^" slayed", player);
 	}
+	return PLUGIN_HANDLED;
+}
+
+public CmdMenuKick(const id, const level) {
+	if(~get_user_flags(id) & level) {
+		console_print(id, "You have not access to this command!");
+		return PLUGIN_HANDLED;
+	}
+
+	APS_PlMenu_Show(id, .item = KickItemId);
+	return PLUGIN_HANDLED;
+}
+
+public CmdMenuSlap(const id, const level) {
+	if(~get_user_flags(id) & level) {
+		console_print(id, "You have not access to this command!");
+		return PLUGIN_HANDLED;
+	}
+
+	APS_PlMenu_Show(id, .item = SlapItemId);
+	return PLUGIN_HANDLED;
+}
+
+public CmdMenuSlay(const id, const level) {
+	if(~get_user_flags(id) & level) {
+		console_print(id, "You have not access to this command!");
+		return PLUGIN_HANDLED;
+	}
+
+	APS_PlMenu_Show(id, .item = SlayItemId);
 	return PLUGIN_HANDLED;
 }
 
