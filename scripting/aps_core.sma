@@ -38,7 +38,7 @@ enum _:PunishmentStruc {
 	PunishmentCreated,
 	PunishmentTime,
 	PunishmentExpired,
-	PunishmentReason[APS_MAX_TYPE_LENGTH],
+	PunishmentReason[APS_MAX_REASON_LENGTH],
 	PunishmentDetails[APS_MAX_DETAILS_LENGTH],
 	APS_PunisherType:PunishmentPunisherType,
 	PunishmentPunisherID,
@@ -66,6 +66,8 @@ public plugin_init() {
 }
 
 public plugin_cfg() {
+	checkAPIVersion();
+
 	new fwdIniting = CreateMultiForward("APS_Initing", ET_IGNORE);
 	new fwdInited = CreateMultiForward("APS_Inited", ET_IGNORE);
 
@@ -75,8 +77,6 @@ public plugin_cfg() {
 
 	DestroyForward(fwdIniting);
 	DestroyForward(fwdInited);
-
-	checkAPIVersion();
 }
 
 public plugin_end() {
@@ -409,8 +409,9 @@ public bool:NativePunishPlayer(const plugin, const argc) {
 	Punishment[PunishmentTime] = get_param(arg_time);
 	get_string(arg_reason, Punishment[PunishmentReason], charsmax(Punishment[PunishmentReason]));
 	get_string(arg_details, Punishment[PunishmentDetails], charsmax(Punishment[PunishmentDetails]));
-	Punishment[PunishmentPunisherID] = get_param(arg_punisher_id);
-	if (Punishment[PunishmentPunisherID] != 0 && is_user_connected(Punishment[PunishmentPunisherID]) && GMX_PlayerIsLoaded(Punishment[PunishmentPunisherID])) {
+	new punisher = get_param(arg_punisher_id);
+	if (punisher != 0 && is_user_connected(punisher) && GMX_PlayerIsLoaded(punisher)) {
+		Punishment[PunishmentPunisherID] = GMX_PlayerGetPlayerId(punisher);
 		Punishment[PunishmentPunisherType] = APS_PunisherTypePlayer;
 	} else {
 		Punishment[PunishmentPunisherID] = 0;
