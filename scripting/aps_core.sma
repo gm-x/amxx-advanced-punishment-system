@@ -3,6 +3,7 @@
 #include <reapi>
 #include <grip>
 #include <gmx>
+#include <gmx_stocks>
 #include <aps>
 
 #define CHECK_NATIVE_TYPE(%1,%2) \
@@ -307,6 +308,24 @@ parsePunishment(const GripJSONValue:punishment) {
 	tmp = grip_json_object_get_value(punishment, "expired_at");
 	Punishment[PunishmentExpired] = grip_json_get_type(tmp) != GripJSONNull ? grip_json_get_number(tmp) : 0;
 	grip_destroy_json_value(tmp);
+
+	tmp = grip_json_object_get_value(punishment, "punisher_id");
+	if (grip_json_get_type(tmp) != GripJSONNull) {
+		Punishment[PunishmentPunisherType] = APS_PunisherTypePlayer;
+		Punishment[PunishmentPunisherID] = grip_json_get_number(tmp);
+		grip_destroy_json_value(tmp);
+	} else {
+		grip_destroy_json_value(tmp);
+		tmp = grip_json_object_get_value(punishment, "punisher_user_id");
+		if (grip_json_get_type(tmp) != GripJSONNull) {
+			Punishment[PunishmentPunisherType] = APS_PunisherTypeUser;
+			Punishment[PunishmentPunisherID] = grip_json_get_number(tmp);
+		} else {
+			Punishment[PunishmentPunisherType] = APS_PunisherTypeServer;
+			Punishment[PunishmentPunisherID] = 0;
+		}
+		grip_destroy_json_value(tmp);
+	}
 
 	tmp = grip_json_object_get_value(punishment, "reason");
 	if (grip_json_get_type(tmp) == GripJSONObject) {

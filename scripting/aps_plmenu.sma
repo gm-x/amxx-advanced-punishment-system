@@ -117,7 +117,8 @@ public plugin_init() {
 
 	RegisterHookChain(RG_CBasePlayer_SetClientUserInfoName, "CBasePlayer_SetClientUserInfoName_Post", true);
 
-	register_clcmd("aps_plmenu", "CmdPlayersMenu");
+	register_clcmd("aps_plmenu", "CmdPlayersMenu", ADMIN_MENU);
+	register_concmd("aps_reloadreasons", "CmdReloadReasons", ADMIN_CFG);
 
 	register_menucmd(register_menuid("APS_PLAYERS_MENU"), 1023, "HandlePlayersMenu");
 	register_menucmd(register_menuid("APS_TYPES_MENU"), 1023, "HandleTypesMenu");
@@ -174,7 +175,7 @@ public GMX_Init() {
 	}
 }
 
-public OnReasonsResponse(const GmxResponseStatus:status, const GripJSONValue:data, const userid) {
+public OnReasonsResponse(const GmxResponseStatus:status, const GripJSONValue:data) {
 	if (status != GmxResponseStatusOk) {
 		return;
 	}
@@ -195,9 +196,24 @@ public CBasePlayer_SetClientUserInfoName_Post(const id, const infobuffer[], cons
 	}
 }
 
-public CmdPlayersMenu(const id) {
+public CmdPlayersMenu(const id, const level) {
+	if (~get_user_flags(id) & level) {
+		console_print(id, "You have not access to this command!");
+		return PLUGIN_HANDLED;
+	}
+
 	clearPlayer(id);
 	renderMenu(id);
+	return PLUGIN_HANDLED;
+}
+
+public CmdReloadReasons(const id, const level) {
+	if (~get_user_flags(id) & level) {
+		console_print(id, "You have not access to this command!");
+		return PLUGIN_HANDLED;
+	}
+
+	GMX_MakeRequest("punish/reasons", Invalid_GripJSONValue, "OnReasonsResponse");
 	return PLUGIN_HANDLED;
 }
 

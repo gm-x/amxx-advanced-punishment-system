@@ -1,15 +1,11 @@
 #include <amxmodx>
-#include <reapi>
+#include <engine>
 #include <aps>
 
 new APS_Type:TypeId;
 
 public plugin_init() {
-	register_plugin("[APS] Chat VTC ReAPI", APS_VERSION_STR, "GM-X Team");
-
-	if (!has_vtc()) {
-		set_fail_state("[APS] VoiceTranscoder not found");
-	}
+	register_plugin("[APS] Chat VTC Engine", APS_VERSION_STR, "GM-X Team");
 }
 
 public APS_Inited() {
@@ -21,12 +17,12 @@ public APS_Inited() {
 
 public APS_PlayerPunished(const id, const APS_Type:type) {
 	if (type == TypeId) {
-		VTC_MuteClient(id);
+		set_speak(id, SPEAK_MUTED);
 	}
 }
 
 public APS_PlayerAmnestying(const id, const APS_Type:type) {
 	if (type == TypeId) {
-		VTC_UnmuteClient(id);
+		set_speak(id, SPEAK_NORMAL);
 	}
 }

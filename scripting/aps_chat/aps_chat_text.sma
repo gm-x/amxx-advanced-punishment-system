@@ -35,7 +35,7 @@ public APS_PlayerChecking(const id) {
 public APS_Inited() {
 	TypeId = APS_GetTypeIndex("text_chat");
 	if (TypeId == APS_InvalidType) {
-		set_fail_state("[APS CHAT REAPI] Type text_chat not registered");
+		set_fail_state("[APS] Type text_chat not registered");
 	}
 }
 

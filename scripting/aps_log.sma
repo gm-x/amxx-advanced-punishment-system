@@ -1,5 +1,6 @@
 #include <amxmodx>
 #include <gmx>
+#include <gmx_stocks>
 #include <aps>
 #include <aps_mixed>
 #include <aps_time>
@@ -118,10 +119,12 @@ public APS_PlayerSlaped(const admin, const player, const damage) {
 
 	if (!task_exists(player + SLAP_TASK_ID)) {
 		SlapData[player][SlapAdmin] = admin;
+		SlapData[player][SlapTimes] = 1;
 		set_task(1.0, "TaskSlapNotify", player + SLAP_TASK_ID);
 	} else if (SlapData[player][SlapAdmin] != admin) {
 		slapFlush(player);
 		SlapData[player][SlapAdmin] = admin;
+		SlapData[player][SlapTimes] = 1;
 		set_task(1.0, "TaskSlapNotify", player + SLAP_TASK_ID);
 	} else {
 		SlapData[player][SlapTimes]++;
@@ -226,15 +229,15 @@ playerBanned(const player) {
 }
 
 playerBlockedVoice(const player) {
-	new admin = APS_GetPunisherId();
+	new punisher = APS_GetPunisherId();
+	new APS_PunisherType:punisherType = APS_GetPunisherType();
 	new time = APS_GetTime();
 	new reason[APS_MAX_REASON_LENGTH], details[APS_MAX_DETAILS_LENGTH];
 	APS_GetReason(reason, charsmax(reason));
 	APS_GetDetails(details, charsmax(details));
 
-	log_amx("Voice Chat: %N blocked %N (time %d sec.) (reason ^"%s^") (details ^"%s^")", admin, player, time, reason, details);
-
-	if (admin == 0) {
+	if (punisherType != APS_PunisherTypePlayer || !GMX_PlayerIsLoaded(punisher)) {
+		log_amx("Voice Chat: %N blocked %N (time %d sec.) (reason ^"%s^") (details ^"%s^")", 0, player, time, reason, details);
 		if (findPlayersForActivity(true, true)) {
 			new timeStr[64];
 			FOREACH_PLAYERS(id) {
@@ -243,6 +246,8 @@ playerBlockedVoice(const player) {
 			}
 		}
 	} else {
+		new admin = GMX_GetPlayerByPlayerID(punisher);
+		log_amx("Voice Chat: %N blocked %N (time %d sec.) (reason ^"%s^") (details ^"%s^")", admin, player, time, reason, details);
 		if (findPlayersForActivity(true, false)) {
 			new timeStr[64];
 			FOREACH_PLAYERS(id) {
