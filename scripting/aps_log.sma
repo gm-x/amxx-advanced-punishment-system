@@ -194,15 +194,15 @@ slapFlush(const player) {
 }
 
 playerBanned(const player) {
-	new admin = APS_GetPunisherId();
+	new punisher = APS_GetPunisherId();
+	new APS_PunisherType:punisherType = APS_GetPunisherType();
 	new time = APS_GetTime();
 	new reason[APS_MAX_REASON_LENGTH], details[APS_MAX_DETAILS_LENGTH];
 	APS_GetReason(reason, charsmax(reason));
 	APS_GetDetails(details, charsmax(details));
 
-	log_amx("Ban: %N banned %N (time %d sec.) (reason ^"%s^") (details ^"%s^")", admin, player, time, reason, details);
-
-	if (admin == 0) {
+	if (punisherType != APS_PunisherTypePlayer || !GMX_PlayerIsLoaded(punisher)) {
+		log_amx("Ban: %N banned %N (time %d sec.) (reason ^"%s^") (details ^"%s^")", 0, player, time, reason, details);
 		if (findPlayersForActivity(true, true)) {
 			new timeStr[64];
 			FOREACH_PLAYERS(id) {
@@ -211,6 +211,9 @@ playerBanned(const player) {
 			}
 		}
 	} else {
+		new admin = GMX_GetPlayerByPlayerID(punisher);
+		log_amx("Ban: %N banned %N (time %d sec.) (reason ^"%s^") (details ^"%s^")", admin, player, time, reason, details);
+
 		if (findPlayersForActivity(true, false)) {
 			new timeStr[64];
 			FOREACH_PLAYERS(id) {
@@ -266,15 +269,15 @@ playerBlockedVoice(const player) {
 }
 
 playerBlockedText(const player) {
-	new admin = APS_GetPunisherId();
+	new punisher = APS_GetPunisherId();
+	new APS_PunisherType:punisherType = APS_GetPunisherType();
 	new time = APS_GetTime();
 	new reason[APS_MAX_REASON_LENGTH], details[APS_MAX_DETAILS_LENGTH];
 	APS_GetReason(reason, charsmax(reason));
 	APS_GetDetails(details, charsmax(details));
 
-	log_amx("Text Chat: %N blocked %N (time %d sec.) (reason ^"%s^") (details ^"%s^")", admin, player, time, reason, details);
-
-	if (admin == 0) {
+	if (punisherType != APS_PunisherTypePlayer || !GMX_PlayerIsLoaded(punisher)) {
+		log_amx("Text Chat: %N blocked %N (time %d sec.) (reason ^"%s^") (details ^"%s^")", 0, player, time, reason, details);
 		if (findPlayersForActivity(true, true)) {
 			new timeStr[64];
 			FOREACH_PLAYERS(id) {
@@ -283,6 +286,8 @@ playerBlockedText(const player) {
 			}
 		}
 	} else {
+		new admin = GMX_GetPlayerByPlayerID(punisher);
+		log_amx("Text Chat: %N blocked %N (time %d sec.) (reason ^"%s^") (details ^"%s^")", admin, player, time, reason, details);
 		if (findPlayersForActivity(true, false)) {
 			new timeStr[64];
 			FOREACH_PLAYERS(id) {
