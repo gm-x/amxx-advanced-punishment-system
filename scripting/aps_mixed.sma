@@ -91,6 +91,18 @@ public APS_PlMenu_Inited() {
 	);
 }
 
+public APS_PlMenu_CheckAccess(const player, const target, const APS_PlMenu_Item:item) {
+	if (item == KickItemId) {
+		return ((get_user_flags(player) & ADMIN_KICK) != ADMIN_KICK) ? PLUGIN_HANDLED : PLUGIN_CONTINUE;
+	} else if (item == SlapItemId) {
+		return ((get_user_flags(player) & ADMIN_SLAY) != ADMIN_SLAY) ? PLUGIN_HANDLED : PLUGIN_CONTINUE;
+	} else if (item == SlayItemId) {
+		return ((get_user_flags(player) & ADMIN_SLAY) != ADMIN_SLAY) ? PLUGIN_HANDLED : PLUGIN_CONTINUE;
+	}
+
+	return PLUGIN_CONTINUE;
+}
+
 public HandlePlMenuKickAction(const admin, const player, const reason[], const itme, const extra) {
 	playerKick(admin, player, reason);
 }

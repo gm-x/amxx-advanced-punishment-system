@@ -102,7 +102,7 @@ enum _:player_s {
 	PlayerIds[MAX_PLAYERS],
 };
 
-new FwReturn;
+new FwCheckAccess, FwReturn;
 new Array:Items, Item[item_s];
 new Array:Reasons, Reason[reason_s];
 new Array:Times, TimesNum;
@@ -129,6 +129,8 @@ public plugin_init() {
 	Items = ArrayCreate(item_s, 0);
 	Reasons = ArrayCreate(reason_s, 0);
 	Times = ArrayCreate(1, 0);
+
+	FwCheckAccess = CreateMultiForward("APS_PlMenu_CheckAccess", ET_STOP, FP_CELL, FP_CELL, FP_CELL);
 
 	hook_cvar_change(create_cvar(
 		"aps_plmenu_times",
@@ -157,6 +159,8 @@ public plugin_end() {
 
 	ArrayDestroy(Reasons);
 	ArrayDestroy(Times);
+
+	DestroyForward(FwCheckAccess);
 }
 
 public HooCvarTimes(const pcvar, const oldValue[], const newValue[]) {
@@ -395,8 +399,12 @@ showItemsMenu(const id, const page = 0) {
 	new keys = MENU_KEY_0;
 	for (new i = start, item; i < end; i++) {
 		get_item(i);
-		keys |= (1 << item);
-		len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), ++item, Item[ItemTitle]);
+		if (!ExecuteForward(FwCheckAccess, FwReturn, id, get_player_data(id, Index_Target), i) || FwReturn == PLUGIN_HANDLED) {
+			len += formatex(menu[len], charsmax(menu) - len, INACTIVE_ITEM(%l^n), ++item, Item[ItemTitle]);
+		} else {
+			keys |= (1 << item);
+			len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), ++item, Item[ItemTitle]);
+		}
 	}
 
 	new tmp[15];
@@ -557,6 +565,12 @@ public HandlePlayersMenu(const id, const key) {
 
 public HandleTypesMenu(const id, const key) {
 	if (!isTargetValid(id)) {
+		setTarget(id);
+		renderMenu(id);
+		return;
+	}
+
+	if (!ExecuteForward(FwCheckAccess, FwReturn, id, get_player_data(id, Index_Target), get_player_data(id, Index_Item)) || FwReturn == PLUGIN_HANDLED) {
 		setTarget(id);
 		renderMenu(id);
 		return;

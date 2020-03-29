@@ -40,6 +40,10 @@ public APS_PlMenu_Inited() {
 	ItemId = APS_PlMenu_Add(TypeId, "APS_TYPE_BAN");
 }
 
+public APS_PlMenu_CheckAccess(const player, const target, const APS_PlMenu_Item:item) {
+	return (item == ItemId && (get_user_flags(player) & ADMIN_BAN) != ADMIN_BAN) ? PLUGIN_HANDLED : PLUGIN_CONTINUE;
+}
+
 public HandlePlMenuAction(const admin, const player, const reason[], const time) {
 	APS_PunishPlayer(player, TypeId, time, reason, "", admin);
 }

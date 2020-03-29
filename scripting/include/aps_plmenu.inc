@@ -13,6 +13,7 @@ enum APS_PlMenu_Handler {
 };
 
 forward APS_PlMenu_Inited();
+forward APS_PlMenu_CheckAccess(const player, const target, const APS_PlMenu_Item:item);
 
 // handler(const admin, const player, const reason[], const itme, const extra)
 stock APS_PlMenu_Handler:APS_PlMenu_CreateHandler(const handler[]) {

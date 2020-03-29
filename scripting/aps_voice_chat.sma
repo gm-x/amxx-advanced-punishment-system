@@ -20,6 +20,10 @@ public APS_PlMenu_Inited() {
 	ItemId = APS_PlMenu_Add(TypeId, "APS_TYPE_VOICE_CHAT");
 }
 
+public APS_PlMenu_CheckAccess(const player, const target, const APS_PlMenu_Item:item) {
+	return (item == ItemId && (get_user_flags(player) & ADMIN_CHAT) != ADMIN_CHAT) ? PLUGIN_HANDLED : PLUGIN_CONTINUE;
+}
+
 public CmdMute(const id, const access) {
 	if(~get_user_flags(id) & access) {
 		console_print(id, "You have not access to this command!");
