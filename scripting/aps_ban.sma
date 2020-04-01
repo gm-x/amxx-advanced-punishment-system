@@ -4,6 +4,10 @@
 #include <aps_plmenu>
 #include <aps_time>
 
+const FLAG_ACCESS           = ADMIN_BAN;            // Флаг доступа к банам
+const FLAG_IMMUNITY         = ADMIN_IMMUNITY;       // Флаг иммунитета к банам
+const FLAG_IGNORE_IMMUNITY  = ADMIN_RCON;           // Флаг, который может игнорировать иммунитет к банам  
+
 enum FWD {
 	FWD_PlayerBanKick,
 }
@@ -12,14 +16,16 @@ new Forwards[FWD], FwdReturn;
 
 new APS_Type:TypeId, APS_PlMenu_Item:ItemId = APS_PlMenu_InvalidItem;
 
+#define has_user_acess(%0,%1)           bool:((get_user_flags(%0) & %1) == %1)     
+
 public plugin_init() {
 	register_plugin("[APS] Ban", APS_VERSION_STR, "GM-X Team");
 
 	register_dictionary("aps_ban.txt");
 	register_dictionary("aps_time.txt");
 
-	register_concmd("aps_ban", "CmdBan", ADMIN_BAN);
-	register_concmd("amx_banmenu", "CmdMenu", ADMIN_BAN);
+	register_concmd("aps_ban", "CmdBan", FLAG_ACCESS);
+	register_concmd("amx_banmenu", "CmdMenu", FLAG_ACCESS);
 	Forwards[FWD_PlayerBanKick] = CreateMultiForward("APS_PlayerBanKick", ET_STOP, FP_CELL);
 }
 
@@ -41,7 +47,19 @@ public APS_PlMenu_Inited() {
 }
 
 public APS_PlMenu_CheckAccess(const player, const target, const APS_PlMenu_Item:item) {
-	return (item == ItemId && (get_user_flags(player) & ADMIN_BAN) != ADMIN_BAN) ? PLUGIN_HANDLED : PLUGIN_CONTINUE;
+    if(item != ItemId) {
+        return PLUGIN_CONTINUE;
+    }
+
+    if(!has_user_acess(player, FLAG_IGNORE_IMMUNITY) && has_user_acess(target, FLAG_IMMUNITY)) {
+        return PLUGIN_HANDLED;
+    }
+
+    if(has_user_acess(player, FLAG_IGNORE_IMMUNITY)) {
+        return PLUGIN_CONTINUE;
+    }
+
+    return PLUGIN_CONTINUE;
 }
 
 public HandlePlMenuAction(const admin, const player, const reason[], const time) {
