@@ -2,14 +2,20 @@
 #include <aps>
 #include <aps_plmenu>
 
+const FLAG_ACCESS           = ADMIN_CHAT;			// Флаг доступа к блокировке чата
+const FLAG_IMMUNITY         = ADMIN_IMMUNITY;       // Флаг иммунитета к блокировке чата
+const FLAG_IGNORE_IMMUNITY  = ADMIN_RCON;           // Флаг, который может игнорировать иммунитет к блокировке чата 
+
 new APS_Type:TypeId, APS_PlMenu_Item:ItemId = APS_PlMenu_InvalidItem;
+
+#define has_user_acess(%0,%1)           bool:((get_user_flags(%0) & %1) == %1) 
 
 public plugin_init() {
 	register_plugin("[APS] Voice Chat", APS_VERSION_STR, "GM-X Team");
 	register_dictionary("aps_voice_chat.txt");
 
-	register_concmd("amx_mute", "CmdMute", ADMIN_CHAT);
-	register_concmd("aps_voicemenu", "CmdMenu", ADMIN_CHAT);
+	register_concmd("amx_mute", "CmdMute", FLAG_ACCESS);
+	register_concmd("aps_voicemenu", "CmdMenu", FLAG_ACCESS);
 }
 
 public APS_Initing() {
@@ -21,7 +27,19 @@ public APS_PlMenu_Inited() {
 }
 
 public APS_PlMenu_CheckAccess(const player, const target, const APS_PlMenu_Item:item) {
-	return (item == ItemId && (get_user_flags(player) & ADMIN_CHAT) != ADMIN_CHAT) ? PLUGIN_HANDLED : PLUGIN_CONTINUE;
+    if(item != ItemId) {
+        return PLUGIN_CONTINUE;
+    }
+
+    if(!has_user_acess(player, FLAG_IGNORE_IMMUNITY) && has_user_acess(target, FLAG_IMMUNITY)) {
+        return PLUGIN_HANDLED;
+    }
+
+    if(has_user_acess(player, FLAG_IGNORE_IMMUNITY)) {
+        return PLUGIN_CONTINUE;
+    }
+
+    return PLUGIN_CONTINUE;
 }
 
 public CmdMute(const id, const access) {
