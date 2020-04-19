@@ -125,6 +125,7 @@ public plugin_init() {
 	register_menucmd(register_menuid("APS_REASONS_MENU"), 1023, "HandleReasonsMenu");
 	register_menucmd(register_menuid("APS_TIMES_MENU"), 1023, "HandleTimesMenu");
 	register_menucmd(register_menuid("APS_CONFIRM_MENU"), 1023, "HandleConfirmMenu");
+	register_menucmd(register_menuid("APS_AMNESTY_MENU"), 1023, "HandleAmnestyMenu");
 
 	Items = ArrayCreate(item_s, 0);
 	Reasons = ArrayCreate(reason_s, 0);
@@ -274,7 +275,7 @@ public bool:APS_PlMenu_Show(const id, const player, const item, const reason, co
 
 	clearPlayer(id);
 	if (player != 0) {
-		if (!is_user_connected(player)) {
+		if (!is_user_connected(player) || !GMX_PlayerIsLoaded(player)) {
 			return false;
 		}
 		setTarget(id, player);
@@ -303,7 +304,9 @@ public bool:APS_PlMenu_Show(const id, const player, const item, const reason, co
 	}
 	
 	set_player_data(id, Index_Extra, extra);
-	// enable_player_default(id, Index_Extra);
+	enable_player_default(id, Index_Extra);
+ 
+	// Check access
 
 	if (check_player_default(id, Index_Target)) {
 		nextStep(id);
@@ -360,7 +363,16 @@ showPlayersMenu(const id, const page = 0) {
 			len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\y[%s] ), ++item, TeamNames[team]);
 		}
 
-		len += formatex(menu[len], charsmax(menu) - len, " \w%s^n", Players[player][PlayerName]);
+		len += formatex(menu[len], charsmax(menu) - len, " \w%s", Players[player][PlayerName]);
+
+		if (check_player_default(id, Index_Item)) {
+			get_item(get_player_data(id, Index_Item));
+			if (APS_GetPlayerPunishment(player, Item[ItemType])) {
+				len += formatex(menu[len], charsmax(menu) - len, " %l", "APS_MENU_HAS_PUNISHMENT");
+			}
+		}
+
+		len += formatex(menu[len], charsmax(menu) - len, " ^n");
 	}
 
 	new tmp[15];
@@ -397,13 +409,21 @@ showItemsMenu(const id, const page = 0) {
 	new len = formatex(menu, charsmax(menu), "%s\r%l^t\d%d/%d^n^n", MENU_TAB, "APS_MENU_TYPES_TITLE", Players[id][PlayerPage] + 1, pages + 1);
 
 	new keys = MENU_KEY_0;
+
+	new target = get_player_data(id, Index_Target);
 	for (new i = start, item; i < end; i++) {
 		get_item(i);
-		if (!ExecuteForward(FwCheckAccess, FwReturn, id, get_player_data(id, Index_Target), i) || FwReturn == PLUGIN_HANDLED) {
-			len += formatex(menu[len], charsmax(menu) - len, INACTIVE_ITEM(%l^n), ++item, Item[ItemTitle]);
+		if (!ExecuteForward(FwCheckAccess, FwReturn, id, target, i) || FwReturn == PLUGIN_HANDLED) {
+			len += formatex(menu[len], charsmax(menu) - len, INACTIVE_ITEM(%l), ++item, Item[ItemTitle]);
 		} else {
 			keys |= (1 << item);
-			len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), ++item, Item[ItemTitle]);
+			len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l), ++item, Item[ItemTitle]);
+		}
+
+		if (APS_GetPlayerPunishment(target, Item[ItemType])) {
+			len += formatex(menu[len], charsmax(menu) - len, " %l^n", "APS_MENU_HAS_PUNISHMENT");
+		} else {
+			len += formatex(menu[len], charsmax(menu) - len, "^n");
 		}
 	}
 
@@ -512,6 +532,8 @@ showConfirmMenu(const id) {
 	new menu[MAX_MENU_LENGTH], tmp;
 	new len = formatex(menu, charsmax(menu), "%s\r%l^n^n", MENU_TAB, "APS_MENU_CONFIRM_TITLE");
 
+	len += formatex(menu[len], charsmax(menu) - len, "%s\y%l\w: \y%n^n", MENU_TAB, "APS_MENU_PLAYER", get_player_data(id, Index_Target));
+
 	get_item(get_player_data(id, Index_Item));
 	len += formatex(menu[len], charsmax(menu) - len, "%s\y%l\w: \y%l^n", MENU_TAB, "APS_MENU_TYPE", Item[ItemTitle]);
 
@@ -542,25 +564,70 @@ showConfirmMenu(const id) {
 	show_menu(id, keys, menu, -1, "APS_CONFIRM_MENU");
 }
 
+showAmnestyMenu(const id) {
+	SetGlobalTransTarget(id);
+
+	new menu[MAX_MENU_LENGTH];
+	new len = formatex(menu, charsmax(menu), "%s\r%l^n^n", MENU_TAB, "APS_MENU_AMNESTY_TITLE");
+
+	len += formatex(menu[len], charsmax(menu) - len, "%s\y%l\w: \y%n^n", MENU_TAB, "APS_MENU_PLAYER", get_player_data(id, Index_Target));
+
+	get_item(get_player_data(id, Index_Item));
+	len += formatex(menu[len], charsmax(menu) - len, "%s\y%l\w: \y%l^n", MENU_TAB, "APS_MENU_TYPE", Item[ItemTitle]);
+
+	new tmp[64];
+	APS_GetReason(tmp, charsmax(tmp));
+	len += formatex(menu[len], charsmax(menu) - len, "%s\y%l\w: \y%s^n", MENU_TAB, "APS_MENU_REASON", tmp);
+
+	new time = APS_GetTime();
+	if (time >= 0) {
+		aps_get_time_length(id, time, tmp, charsmax(tmp));
+		len += formatex(menu[len], charsmax(menu) - len, "%s\y%l\w: \y%s^n", MENU_TAB, "APS_MENU_TIME", tmp);
+	} else {
+		len += formatex(menu[len], charsmax(menu) - len, "%s\y%l\w: \r%l^n", MENU_TAB, "APS_MENU_TIME", "APS_MENU_FOREVER");
+	}
+
+	new keys = MENU_KEY_1 | MENU_KEY_2;
+	len += formatex(menu[len], charsmax(menu) - len, "^n^n");
+	len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), 1, "YES");
+	len += formatex(menu[len], charsmax(menu) - len, ACTIVE_ITEM(\w%l^n), 2, "NO");
+
+	show_menu(id, keys, menu, -1, "APS_AMNESTY_MENU");
+}
+
 public HandlePlayersMenu(const id, const key) {
 	switch (key) {
 		case 8: {
 			showPlayersMenu(id, ++Players[id][PlayerPage]);
+			return;
 		}
 
 		case 9: {
 			showPlayersMenu(id, --Players[id][PlayerPage]);
-		}
-
-		default: {
-			new index = (Players[id][PlayerPage] * 8) + key;
-			new player = Players[id][PlayerList][index];
-			if (is_user_connected(player) && get_user_userid(player) == Players[id][PlayerIds][index]) {
-				setTarget(id, player);
-				nextStep(id);
-			}
+			return;
 		}
 	}
+
+	new index = (Players[id][PlayerPage] * 8) + key;
+	new player = Players[id][PlayerList][index];
+	if (!is_user_connected(player) || get_user_userid(player) != Players[id][PlayerIds][index] || !GMX_PlayerIsLoaded(player)) {
+		showPlayersMenu(id);
+		return;
+	}
+
+	setTarget(id, player);
+	if (!check_player_default(id, Index_Item)) {
+		nextStep(id);
+		return;
+	}
+
+	get_item(get_player_data(id, Index_Item));
+	if (!APS_GetPlayerPunishment(player, Item[ItemType])) {
+		nextStep(id);
+		return;
+	}
+
+	showAmnestyMenu(id);
 }
 
 public HandleTypesMenu(const id, const key) {
@@ -579,16 +646,23 @@ public HandleTypesMenu(const id, const key) {
 	switch (key) {
 		case 8: {
 			showItemsMenu(id, ++Players[id][PlayerPage]);
+			return;
 		}
 
 		case 9: {
 			showItemsMenu(id, --Players[id][PlayerPage]);
+			return;
 		}
+	}
 
-		default: {
-			set_player_data(id, Index_Item, (Players[id][PlayerPage] * 8) + key);
-			nextStep(id);
-		}
+	new target = get_player_data(id, Index_Target);
+	new item = (Players[id][PlayerPage] * 8) + key;
+	set_player_data(id, Index_Item, item);
+	get_item(item);
+	if (APS_GetPlayerPunishment(target, Item[ItemType])) {
+		showAmnestyMenu(id);
+	} else {
+		nextStep(id);
 	}
 }
 
@@ -660,6 +734,26 @@ public HandleConfirmMenu(const id, const key) {
 
 	get_item(get_player_data(id, Index_Item));
 	makeAction(id);
+}
+
+public HandleAmnestyMenu(const id, const key) {
+	if (!isTargetValid(id)) {
+		setTarget(id);
+		renderMenu(id);
+		return;
+	}
+
+	if (key != 0) {
+		if (!check_player_default(id, Index_Target)) {
+			setTarget(id);
+			renderMenu(id);
+		}
+		return;
+	}
+
+	new target = get_player_data(id, Index_Target);
+	get_item(get_player_data(id, Index_Item));
+	APS_AmnestyPlayer(target, Item[ItemType]);
 }
 
 nextStep(const id) {

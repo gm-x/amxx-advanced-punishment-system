@@ -27,7 +27,7 @@ native APS_GetTypesNum();
 native APS_Type:APS_GetTypeIndex(const name[]);
 native APS_GetTypeName(const APS_Type:index, value[], len);
 native bool:APS_PunishPlayer(const player, const APS_Type:type, const time, const reason[], const details[] = "", const punisherId = 0, const extra = 0);
-native bool:APS_AmnestyPlayer(const player, const punishmentID);
+native bool:APS_AmnestyPlayer(const player, const APS_Type:type);
 native bool:APS_GetPlayerPunishment(const player, const APS_Type:type);
 native APS_GetId();
 native APS_GetExtra();

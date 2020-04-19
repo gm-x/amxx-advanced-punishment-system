@@ -4,10 +4,13 @@ APS_MENU_TYPES_TITLE=Choose punishment type
 APS_MENU_REASONS_TITLE=Choose punishment reason
 APS_MENU_TIMES_TITLE=Choose punishment time
 APS_MENU_CONFIRM_TITLE=Confirm punishment
+APS_MENU_AMNESTY_TITLE=Amnesty player
+APS_MENU_PLAYER=Player
 APS_MENU_TYPE=Type
 APS_MENU_REASON=Reason
 APS_MENU_TIME=Time
 APS_MENU_FOREVER=Forever
+APS_MENU_HAS_PUNISHMENT=\y[\r*\y]
 
 [ru]
 APS_MENU_PLAYERS_TITLE=Выберите игрока
@@ -15,7 +18,10 @@ APS_MENU_TYPES_TITLE=Выберите тип наказания
 APS_MENU_REASONS_TITLE=Выберите причину наказания
 APS_MENU_TIMES_TITLE=Выберите время наказания
 APS_MENU_CONFIRM_TITLE=Подтвердите наказание
+APS_MENU_AMNESTY_TITLE=Помиловать игрока
+APS_MENU_PLAYER=Игрок
 APS_MENU_TYPE=Тип
 APS_MENU_REASON=Причина
 APS_MENU_TIME=Время
 APS_MENU_FOREVER=Навсегда
+APS_MENU_HAS_PUNISHMENT=\y[\r*\y]

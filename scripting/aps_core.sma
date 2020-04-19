@@ -190,7 +190,6 @@ public OnAmnestied(const GmxResponseStatus:status, GripJSONValue:data, const use
 			ExecuteForward(Forwards[FWD_PlayerAmnestied], FwdReturn, id, Punishment[PunishmentType]);
 		}
 	}
-	grip_destroy_json_value(tmp);
 }
 
 public TaskCheckPlayer(id) {
@@ -310,14 +309,14 @@ parsePunishment(const GripJSONValue:punishment) {
 	grip_destroy_json_value(tmp);
 
 	tmp = grip_json_object_get_value(punishment, "punisher_id");
-	if (grip_json_get_type(tmp) != GripJSONNull) {
+	if (grip_json_get_type(tmp) == GripJSONNumber) {
 		Punishment[PunishmentPunisherType] = APS_PunisherTypePlayer;
 		Punishment[PunishmentPunisherID] = grip_json_get_number(tmp);
 		grip_destroy_json_value(tmp);
 	} else {
 		grip_destroy_json_value(tmp);
 		tmp = grip_json_object_get_value(punishment, "punisher_user_id");
-		if (grip_json_get_type(tmp) != GripJSONNull) {
+		if (grip_json_get_type(tmp) == GripJSONNumber) {
 			Punishment[PunishmentPunisherType] = APS_PunisherTypeUser;
 			Punishment[PunishmentPunisherID] = grip_json_get_number(tmp);
 		} else {
@@ -457,7 +456,7 @@ public bool:NativeAmnestyPlayer(const plugin, const argc) {
 		if (Punishment[PunishmentStatus] != APS_PunishmentStatusActive) {
 			continue;
 		}
-		if (Punishment[PunishmentType] != type) {
+		if (Punishment[PunishmentType] == type) {
 			return amnestyPlayer(player);
 		}
 	}
@@ -583,34 +582,6 @@ public NativeSetPunisherId(const plugin, const argc) {
 	Punishment[PunishmentPunisherID] = get_param(arg_value);
 	return 1;
 }
-
-/*
-public NativeUnPunishPlayer(plugin, params) {
-	enum {
-		arg_index = 1,
-		arg_type
-	};
-
-	new index = get_param(arg_index);
-	new punish_type = get_param(arg_type);
-
-	ExecuteForward(g_Forwards[FW_UNPUNISH_PLAYER_PRE]);
-
-
-	ExecuteForward(g_Forwards[FW_UNPUNISH_PLAYER_POST]);
-}
-
-public NativeCheckPlayer(plugin, params) {
-	enum { arg_index = 1 };
-
-	new index = get_param(arg_index);
-
-	ExecuteForward(g_Forwards[FW_CHECK_PLAYER_PRE]);
-
-
-	ExecuteForward(g_Forwards[FW_CHECK_PLAYER_POST]);
-}
-*/
 
 checkAPIVersion() {
 	for(new i, n = get_pluginsnum(), status[2], func; i < n; i++) {
