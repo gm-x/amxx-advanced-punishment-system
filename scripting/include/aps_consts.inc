@@ -20,3 +20,8 @@ enum APS_PunishmentStatus {
 	APS_PunishmentStatusExpired,
 	APS_PunishmentStatusAmnestied
 };
+
+enum (<<=1) {
+	APS_CheckAccess = 1 << 0,
+	APS_CheckImmunityLevel
+};

@@ -2,14 +2,16 @@
 #include <aps>
 #include <aps_plmenu>
 
+const FLAG_ACCESS = ADMIN_CHAT;      // Mute flag access
+
 new APS_Type:TypeId, APS_PlMenu_Item:ItemId = APS_PlMenu_InvalidItem;
 
 public plugin_init() {
 	register_plugin("[APS] Voice Chat", APS_VERSION_STR, "GM-X Team");
 	register_dictionary("aps_voice_chat.txt");
 
-	register_concmd("amx_mute", "CmdMute", ADMIN_CHAT);
-	register_concmd("aps_voicemenu", "CmdMenu", ADMIN_CHAT);
+	register_concmd("amx_mute", "CmdMute", FLAG_ACCESS);
+	register_concmd("aps_voicemenu", "CmdMenu", FLAG_ACCESS);
 }
 
 public APS_Initing() {
@@ -21,18 +23,22 @@ public APS_PlMenu_Inited() {
 }
 
 public APS_PlMenu_CheckAccess(const player, const target, const APS_PlMenu_Item:item) {
-	return (item == ItemId && (get_user_flags(player) & ADMIN_CHAT) != ADMIN_CHAT) ? PLUGIN_HANDLED : PLUGIN_CONTINUE;
+	if (item == ItemId) {
+		return (!APS_CanUserPunish(player, target, FLAG_ACCESS, APS_CheckAccess|APS_CheckImmunityLevel)) ? PLUGIN_HANDLED : PLUGIN_CONTINUE;
+	} 
+
+	return PLUGIN_CONTINUE;
 }
 
 public CmdMute(const id, const access) {
-	if(~get_user_flags(id) & access) {
+	if (!APS_CanUserPunish(id, _, access, APS_CheckAccess)) {
 		console_print(id, "You have not access to this command!");
-		return PLUGIN_HANDLED;
+		return PLUGIN_HANDLED;        
 	}
 
 	enum { arg_player = 1, arg_time, arg_reason, arg_details };
 
-	if(read_argc() < 3) {
+	if (read_argc() < 3) {
 		console_print(id, "USAGE: amx_mute <steamID or nickname or #authid or IP> <time in mins> <reason> [details]");
 		return PLUGIN_HANDLED;
 	}
@@ -41,9 +47,14 @@ public CmdMute(const id, const access) {
 	read_argv(arg_player, tmp, charsmax(tmp));
 
 	new player = APS_FindPlayerByTarget(tmp);
-	if(!player) {
+	if (!player) {
 		console_print(id, "Invalid player %s", tmp);
 		return PLUGIN_HANDLED;
+	}
+
+	if (!APS_CanUserPunish(id, player, _, APS_CheckImmunityLevel)) {
+		console_print(id, "Player has immunity!");
+		return PLUGIN_HANDLED;        
 	}
 
 	new time = read_argv_int(arg_time) * 60;
@@ -56,10 +67,10 @@ public CmdMute(const id, const access) {
 	return PLUGIN_HANDLED;
 }
 
-public CmdMenu(const id, const level) {
-	if(~get_user_flags(id) & level) {
+public CmdMenu(const id, const access) {
+	if (!APS_CanUserPunish(id, _, access, APS_CheckAccess)) {
 		console_print(id, "You have not access to this command!");
-		return PLUGIN_HANDLED;
+		return PLUGIN_HANDLED;        
 	}
 
 	APS_PlMenu_Show(id, .item = ItemId);

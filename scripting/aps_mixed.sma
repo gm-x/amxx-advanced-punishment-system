@@ -4,6 +4,10 @@
 
 #define MENU_TAB "^t^t"
 
+const FLAG_KICK_ACCESS = ADMIN_KICK;      // Kick flag access
+const FLAG_SLAP_ACCESS = ADMIN_SLAY;      // Slap flag access
+const FLAG_SLAY_ACCESS = ADMIN_SLAY;      // Slay flag access
+
 const MAX_DAMAGE_NUM = 7;
 
 enum FWD {
@@ -34,13 +38,13 @@ public plugin_init() {
 	// register_dictionary("common.txt");
 	// register_dictionary("adminhelp.txt");
 
-	register_concmd("amx_kick", "CmdKick", ADMIN_KICK);
-	register_concmd("amx_slap", "CmdSlap", ADMIN_SLAY);
-	register_concmd("amx_slay", "CmdSlay", ADMIN_SLAY);
+	register_concmd("amx_kick", "CmdKick", FLAG_KICK_ACCESS);
+	register_concmd("amx_slap", "CmdSlap", FLAG_SLAP_ACCESS);
+	register_concmd("amx_slay", "CmdSlay", FLAG_SLAY_ACCESS);
 
-	register_concmd("amx_kickmenu", "CmdMenuKick", ADMIN_KICK);
-	register_concmd("amx_slapmenu", "CmdMenuSlap", ADMIN_SLAY);
-	register_concmd("amx_slaymenu", "CmdMenuSlay", ADMIN_SLAY);
+	register_concmd("amx_kickmenu", "CmdMenuKick", FLAG_KICK_ACCESS);
+	register_concmd("amx_slapmenu", "CmdMenuSlap", FLAG_SLAP_ACCESS);
+	register_concmd("amx_slaymenu", "CmdMenuSlay", FLAG_SLAY_ACCESS);
 
 	register_menucmd(register_menuid("APS_SLAP_MENU"), 1023, "HandleSlapMenu");
 
@@ -93,11 +97,11 @@ public APS_PlMenu_Inited() {
 
 public APS_PlMenu_CheckAccess(const player, const target, const APS_PlMenu_Item:item) {
 	if (item == KickItemId) {
-		return ((get_user_flags(player) & ADMIN_KICK) != ADMIN_KICK) ? PLUGIN_HANDLED : PLUGIN_CONTINUE;
+		return (!APS_CanUserPunish(player, target, FLAG_KICK_ACCESS, APS_CheckAccess|APS_CheckImmunityLevel)) ? PLUGIN_HANDLED : PLUGIN_CONTINUE;
 	} else if (item == SlapItemId) {
-		return ((get_user_flags(player) & ADMIN_SLAY) != ADMIN_SLAY) ? PLUGIN_HANDLED : PLUGIN_CONTINUE;
+		return (!APS_CanUserPunish(player, target, FLAG_SLAP_ACCESS, APS_CheckAccess|APS_CheckImmunityLevel)) ? PLUGIN_HANDLED : PLUGIN_CONTINUE;
 	} else if (item == SlayItemId) {
-		return ((get_user_flags(player) & ADMIN_SLAY) != ADMIN_SLAY) ? PLUGIN_HANDLED : PLUGIN_CONTINUE;
+		return (!APS_CanUserPunish(player, target, FLAG_SLAY_ACCESS, APS_CheckAccess|APS_CheckImmunityLevel)) ? PLUGIN_HANDLED : PLUGIN_CONTINUE;
 	}
 
 	return PLUGIN_CONTINUE;
@@ -146,12 +150,12 @@ public HandleSlapMenu(const id, const key) {
 	}
 }
 
-public CmdKick(const id, const level) {
+public CmdKick(const id, const access) {
 	enum { arg_player = 1, arg_reason };
 
-	if(~get_user_flags(id) & level) {
+	if (!APS_CanUserPunish(id, _, access, APS_CheckAccess)) {
 		console_print(id, "You have not access to this command!");
-		return PLUGIN_HANDLED;
+		return PLUGIN_HANDLED;        
 	}
 
 	if (read_argc() < 1) {
@@ -168,6 +172,11 @@ public CmdKick(const id, const level) {
 		return PLUGIN_HANDLED;
 	}
 
+	if (!APS_CanUserPunish(id, player, _, APS_CheckImmunityLevel)) {
+		console_print(id, "Player has immunity!");
+		return PLUGIN_HANDLED;        
+	}
+
 	new reason[APS_MAX_REASON_LENGTH];
 	read_argv(arg_reason, reason, charsmax(reason));
 	remove_quotes(reason);
@@ -180,12 +189,12 @@ public CmdKick(const id, const level) {
 	return PLUGIN_HANDLED;
 }
 
-public CmdSlap(const id, const level) {
+public CmdSlap(const id, const access) {
 	enum { arg_player = 1, arg_damage };
 
-	if(~get_user_flags(id) & level) {
+	if (!APS_CanUserPunish(id, _, access, APS_CheckAccess)) {
 		console_print(id, "You have not access to this command!");
-		return PLUGIN_HANDLED;
+		return PLUGIN_HANDLED;        
 	}
 
 	if (read_argc() < 2) {
@@ -201,6 +210,11 @@ public CmdSlap(const id, const level) {
 		console_print(id, "Player not found");
 		return PLUGIN_HANDLED;
 	}
+
+	if (!APS_CanUserPunish(id, player, _, APS_CheckImmunityLevel)) {
+		console_print(id, "Player has immunity!");
+		return PLUGIN_HANDLED;        
+	}
 	
 	new damage = read_argv_int(arg_damage);
 
@@ -212,12 +226,12 @@ public CmdSlap(const id, const level) {
 	return PLUGIN_HANDLED;
 }
 
-public CmdSlay(const id, const level) {
+public CmdSlay(const id, const access) {
 	enum { arg_player = 1  };
 
-	if(~get_user_flags(id) & level) {
+	if (!APS_CanUserPunish(id, _, access, APS_CheckAccess)) {
 		console_print(id, "You have not access to this command!");
-		return PLUGIN_HANDLED;
+		return PLUGIN_HANDLED;        
 	}
 
 	if (read_argc() < 2) {
@@ -234,6 +248,11 @@ public CmdSlay(const id, const level) {
 		return PLUGIN_HANDLED;
 	}
 	
+	if (!APS_CanUserPunish(id, player, _, APS_CheckImmunityLevel)) {
+		console_print(id, "Player has immunity!");
+		return PLUGIN_HANDLED;        
+	}
+	
 	if (!playerSlay(id, player)) {
 		console_print(id, "Slap was canceled");
 	} else {
@@ -242,30 +261,30 @@ public CmdSlay(const id, const level) {
 	return PLUGIN_HANDLED;
 }
 
-public CmdMenuKick(const id, const level) {
-	if(~get_user_flags(id) & level) {
+public CmdMenuKick(const id, const access) {
+	if (!APS_CanUserPunish(id, _, access, APS_CheckAccess)) {
 		console_print(id, "You have not access to this command!");
-		return PLUGIN_HANDLED;
+		return PLUGIN_HANDLED;        
 	}
 
 	APS_PlMenu_Show(id, .item = KickItemId);
 	return PLUGIN_HANDLED;
 }
 
-public CmdMenuSlap(const id, const level) {
-	if(~get_user_flags(id) & level) {
+public CmdMenuSlap(const id, const access) {
+	if (!APS_CanUserPunish(id, _, access, APS_CheckAccess)) {
 		console_print(id, "You have not access to this command!");
-		return PLUGIN_HANDLED;
+		return PLUGIN_HANDLED;        
 	}
 
 	APS_PlMenu_Show(id, .item = SlapItemId);
 	return PLUGIN_HANDLED;
 }
 
-public CmdMenuSlay(const id, const level) {
-	if(~get_user_flags(id) & level) {
+public CmdMenuSlay(const id, const access) {
+	if (!APS_CanUserPunish(id, _, access, APS_CheckAccess)) {
 		console_print(id, "You have not access to this command!");
-		return PLUGIN_HANDLED;
+		return PLUGIN_HANDLED;        
 	}
 
 	APS_PlMenu_Show(id, .item = SlayItemId);
@@ -277,12 +296,13 @@ bool:playerKick(const admin, const player, const reason[]) {
 	if (FwdReturn == PLUGIN_HANDLED) {
 		return false;
 	}
-	new userid = get_user_userid(player);
+
 	if (!is_user_bot(player) && reason[0] != EOS) {
-		server_cmd("kick #%d ^"%s^"", userid, reason);
+		rh_drop_client(player, reason);
 	} else {
-		server_cmd("kick #%d", userid);
+		rh_drop_client(player);
 	}
+	
 	ExecuteForward(Forwards[FWD_PlayerKicked], FwdReturn, admin, player, reason);
 	return true;
 }
