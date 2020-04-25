@@ -1,0 +1,5 @@
+* text=auto
+
+# Sources
+*.sma text eol=crlf diff=pawn
+*.inc text eol=crlf diff=pawn

@@ -62,7 +62,7 @@ public APS_PlayerPunished(const id, const APS_Type:type) {
 	if (FwdReturn == PLUGIN_HANDLED) {
 		return;
 	}
-	
+
 	consolePrint(id);
 	set_task(0.3, "TaskKick", id)
 }
