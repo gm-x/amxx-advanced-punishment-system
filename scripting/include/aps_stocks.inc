@@ -32,3 +32,20 @@ stock APS_FindPlayerByTarget(const buffer[]) {
 
 	return result;
 }
+
+stock bool:APS_CanUserPunish(const index, target = 0, access = 0, checks = 0) {
+	new bitsum;
+	if (access && (checks & APS_CheckAccess)) {
+		if ((get_user_flags(index) & access) == access) {
+			bitsum |= APS_CheckAccess;          
+		}
+	}
+
+	if (target && (checks & APS_CheckImmunityLevel)) {
+		if (GMX_PlayerGetImmunity(index) > GMX_PlayerGetImmunity(target)) {
+			bitsum |= APS_CheckImmunityLevel;
+		}
+	}
+	
+	return bool:((bitsum & checks) == checks);
+}

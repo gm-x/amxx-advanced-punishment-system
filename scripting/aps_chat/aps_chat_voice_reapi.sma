@@ -1,5 +1,4 @@
 #include <amxmodx>
-#include <reapi>
 #include <aps>
 
 new APS_Type:TypeId;

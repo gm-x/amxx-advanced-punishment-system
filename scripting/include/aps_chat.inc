@@ -5,8 +5,8 @@
 #define _aps_chat_included
 
 enum (<<=1) {
-    APS_Chat_Voice = 1,
-    APS_Chat_Text,
+	APS_Chat_Voice = 1,
+	APS_Chat_Text,
 }
 
 native APS_ChatGetBlockedType(const player);

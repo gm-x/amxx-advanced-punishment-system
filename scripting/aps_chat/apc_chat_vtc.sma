@@ -1,11 +1,14 @@
 #include <amxmodx>
-#include <VtcApi>
 #include <aps>
 
 new APS_Type:TypeId;
 
 public plugin_init() {
-	register_plugin("[APS] Chat VTC API", APS_VERSION_STR, "GM-X Team");
+	register_plugin("[APS] Chat VTC ReAPI", APS_VERSION_STR, "GM-X Team");
+
+	if (!has_vtc()) {
+		set_fail_state("[APS] VoiceTranscoder not found");
+	}
 }
 
 public APS_Inited() {

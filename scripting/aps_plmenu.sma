@@ -4,12 +4,13 @@
 // #define HIDE_ME_IN_MENU
 
 #include <amxmodx>
-#include <reapi>
 #include <grip>
-#include <gmx>
-#include <gmx_cache>
 #include <aps>
 #include <aps_time>
+#include <gmx_cache>
+
+const FLAG_PLMENU_ACCESS            = ADMIN_MENU;       // Plmenu flag access
+const FLAG_RELOAD_REASONS_ACCESS    = ADMIN_CFG;        // Reload reasons flag access
 
 #define ACTIVE_ITEM(%0) MENU_TAB + "\r%d. " + #%0
 #define INACTIVE_ITEM(%0) MENU_TAB + "\d%d. " + #%0
@@ -117,8 +118,8 @@ public plugin_init() {
 
 	RegisterHookChain(RG_CBasePlayer_SetClientUserInfoName, "CBasePlayer_SetClientUserInfoName_Post", true);
 
-	register_clcmd("aps_plmenu", "CmdPlayersMenu", ADMIN_MENU);
-	register_concmd("aps_reloadreasons", "CmdReloadReasons", ADMIN_CFG);
+	register_clcmd("aps_plmenu", "CmdPlayersMenu", FLAG_PLMENU_ACCESS);
+	register_concmd("aps_reloadreasons", "CmdReloadReasons", FLAG_RELOAD_REASONS_ACCESS);
 
 	register_menucmd(register_menuid("APS_PLAYERS_MENU"), 1023, "HandlePlayersMenu");
 	register_menucmd(register_menuid("APS_TYPES_MENU"), 1023, "HandleTypesMenu");
@@ -201,10 +202,10 @@ public CBasePlayer_SetClientUserInfoName_Post(const id, const infobuffer[], cons
 	}
 }
 
-public CmdPlayersMenu(const id, const level) {
-	if (~get_user_flags(id) & level) {
+public CmdPlayersMenu(const id, const access) {
+	if (!APS_CanUserPunish(id, _, access, APS_CheckAccess)) {
 		console_print(id, "You have not access to this command!");
-		return PLUGIN_HANDLED;
+		return PLUGIN_HANDLED;        
 	}
 
 	clearPlayer(id);
@@ -212,10 +213,10 @@ public CmdPlayersMenu(const id, const level) {
 	return PLUGIN_HANDLED;
 }
 
-public CmdReloadReasons(const id, const level) {
-	if (~get_user_flags(id) & level) {
+public CmdReloadReasons(const id, const access) {
+	if (!APS_CanUserPunish(id, _, access, APS_CheckAccess)) {
 		console_print(id, "You have not access to this command!");
-		return PLUGIN_HANDLED;
+		return PLUGIN_HANDLED;        
 	}
 
 	GMX_MakeRequest("punish/reasons", Invalid_GripJSONValue, "OnReasonsResponse");
@@ -812,7 +813,7 @@ prevStep(const id) {
 
 	if (Players[id][PlayerStep] == Step_Reason) {
 		show_item_step(id, ItemResonHandler, showReasonsMenu, -1, Index_Reason);
-	}	
+	}    
 
 	if (Players[id][PlayerStep] == Step_Item) {
 		if (check_player_default(id, Index_Item)) { 

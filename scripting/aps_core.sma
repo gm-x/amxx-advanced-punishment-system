@@ -1,10 +1,8 @@
 #include <amxmodx>
 #include <amxmisc>
-#include <reapi>
 #include <grip>
-#include <gmx>
-#include <gmx_stocks>
 #include <aps>
+#include <gmx_stocks>
 
 #define CHECK_NATIVE_TYPE(%1,%2) \
 	if (0 > %1 || %1 >= TypesNum) { \

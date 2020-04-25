@@ -1,8 +1,9 @@
 #include <amxmodx>
-#include <gmx>
 #include <aps>
 #include <aps_plmenu>
 #include <aps_time>
+
+const FLAG_ACCESS = ADMIN_BAN;      // Bans flag access
 
 enum FWD {
 	FWD_PlayerBanKick,
@@ -18,8 +19,8 @@ public plugin_init() {
 	register_dictionary("aps_ban.txt");
 	register_dictionary("aps_time.txt");
 
-	register_concmd("aps_ban", "CmdBan", ADMIN_BAN);
-	register_concmd("amx_banmenu", "CmdMenu", ADMIN_BAN);
+	register_concmd("aps_ban", "CmdBan", FLAG_ACCESS);
+	register_concmd("amx_banmenu", "CmdMenu", FLAG_ACCESS);
 	Forwards[FWD_PlayerBanKick] = CreateMultiForward("APS_PlayerBanKick", ET_STOP, FP_CELL);
 }
 
@@ -41,7 +42,11 @@ public APS_PlMenu_Inited() {
 }
 
 public APS_PlMenu_CheckAccess(const player, const target, const APS_PlMenu_Item:item) {
-	return (item == ItemId && (get_user_flags(player) & ADMIN_BAN) != ADMIN_BAN) ? PLUGIN_HANDLED : PLUGIN_CONTINUE;
+	if (item == ItemId) {
+		return (!APS_CanUserPunish(player, target, FLAG_ACCESS, APS_CheckAccess|APS_CheckImmunityLevel)) ? PLUGIN_HANDLED : PLUGIN_CONTINUE;
+	} 
+
+	return PLUGIN_CONTINUE;
 }
 
 public HandlePlMenuAction(const admin, const player, const reason[], const time) {
@@ -49,7 +54,7 @@ public HandlePlMenuAction(const admin, const player, const reason[], const time)
 }
 
 public APS_PlayerPunished(const id, const APS_Type:type) {
-	if(type != TypeId) {
+	if (type != TypeId) {
 		return;
 	}
 
@@ -64,16 +69,16 @@ public APS_PlayerPunished(const id, const APS_Type:type) {
 
 public TaskKick(const id) {
 	if (is_user_connected(id) || is_user_connecting(id)) {
-		server_cmd("kick #%d ^"%s^"", get_user_userid(id), "Вы были забанены! Детали в консоли или на сайте.");
+		rh_drop_client(id, "Вы были забанены! Детали в консоли или на сайте.");
 	}
 }
 
-public CmdBan(const id, const level) {
+public CmdBan(const id, const access) {
 	enum { arg_player = 1, arg_time, arg_reason, arg_details };
 
-	if (~get_user_flags(id) & level) {
+	if (!APS_CanUserPunish(id, _, access, APS_CheckAccess)) {
 		console_print(id, "You have not access to this command!");
-		return PLUGIN_HANDLED;
+		return PLUGIN_HANDLED;        
 	}
 
 	if (read_argc() < 2) {
@@ -89,6 +94,11 @@ public CmdBan(const id, const level) {
 		return PLUGIN_HANDLED;
 	}
 
+	if (!APS_CanUserPunish(id, player, _, APS_CheckImmunityLevel)) {
+		console_print(id, "Player has immunity!");
+		return PLUGIN_HANDLED;        
+	}
+
 	new time = read_argv_int(arg_time) * 60;
 
 	new reason[APS_MAX_REASON_LENGTH], details[APS_MAX_DETAILS_LENGTH];
@@ -100,10 +110,10 @@ public CmdBan(const id, const level) {
 	return PLUGIN_HANDLED;
 }
 
-public CmdMenu(const id, const level) {
-	if(~get_user_flags(id) & level) {
+public CmdMenu(const id, const access) {
+	if (!APS_CanUserPunish(id, _, access, APS_CheckAccess)) {
 		console_print(id, "You have not access to this command!");
-		return PLUGIN_HANDLED;
+		return PLUGIN_HANDLED;        
 	}
 
 	APS_PlMenu_Show(id, .item = ItemId);
@@ -153,7 +163,6 @@ consoleParseConfig() {
 
 	while (!feof(file)) {
 		fgets(file, line, charsmax(line));
-
 		if ((semicolonPos = contain(line, ";")) != -1) {
 			line[semicolonPos] = EOS;
 		}

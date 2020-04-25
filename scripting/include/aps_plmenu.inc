@@ -1,5 +1,5 @@
 #if defined _aps_plmenu_included
-    #endinput
+	#endinput
 #endif
 #define _aps_plmenu_included
 
@@ -17,7 +17,7 @@ forward APS_PlMenu_CheckAccess(const player, const target, const APS_PlMenu_Item
 
 // handler(const admin, const player, const reason[], const itme, const extra)
 stock APS_PlMenu_Handler:APS_PlMenu_CreateHandler(const handler[]) {
-    return APS_PlMenu_Handler:CreateOneForward(get_plugin(-1), handler, FP_CELL, FP_CELL, FP_STRING, FP_CELL, FP_CELL);
+	return APS_PlMenu_Handler:CreateOneForward(get_plugin(-1), handler, FP_CELL, FP_CELL, FP_STRING, FP_CELL, FP_CELL);
 }
 
 stock APS_PlMenu_DestroyHandler(APS_PlMenu_Handler:handler) {

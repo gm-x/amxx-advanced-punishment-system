@@ -4,6 +4,8 @@
 
 #define _aps_included
 
+#include <reapi>
+#include <gmx>
 #include <aps_consts>
 #include <aps_stocks>
 #include <aps_version>
