@@ -38,13 +38,13 @@ public plugin_init() {
 	// register_dictionary("common.txt");
 	// register_dictionary("adminhelp.txt");
 
-	register_concmd("amx_kick", "CmdKick", FLAG_KICK_ACCESS);
-	register_concmd("amx_slap", "CmdSlap", FLAG_SLAP_ACCESS);
-	register_concmd("amx_slay", "CmdSlay", FLAG_SLAY_ACCESS);
+	register_concmd("aps_kick", "CmdKick", FLAG_KICK_ACCESS);
+	register_concmd("aps_slap", "CmdSlap", FLAG_SLAP_ACCESS);
+	register_concmd("aps_slay", "CmdSlay", FLAG_SLAY_ACCESS);
 
-	register_concmd("amx_kickmenu", "CmdMenuKick", FLAG_KICK_ACCESS);
-	register_concmd("amx_slapmenu", "CmdMenuSlap", FLAG_SLAP_ACCESS);
-	register_concmd("amx_slaymenu", "CmdMenuSlay", FLAG_SLAY_ACCESS);
+	register_concmd("aps_kickmenu", "CmdMenuKick", FLAG_KICK_ACCESS);
+	register_concmd("aps_slapmenu", "CmdMenuSlap", FLAG_SLAP_ACCESS);
+	register_concmd("aps_slaymenu", "CmdMenuSlay", FLAG_SLAY_ACCESS);
 
 	register_menucmd(register_menuid("APS_SLAP_MENU"), 1023, "HandleSlapMenu");
 
@@ -159,7 +159,7 @@ public CmdKick(const id, const access) {
 	}
 
 	if (read_argc() < 1) {
-		console_print(id, "USAGE: amx_kick <steamID or nickname or #authid or IP>  <reason>");
+		console_print(id, "USAGE: aps_kick <steamID or nickname or #authid or IP>  <reason>");
 		return PLUGIN_HANDLED;
 	}
 	
@@ -198,7 +198,7 @@ public CmdSlap(const id, const access) {
 	}
 
 	if (read_argc() < 2) {
-		console_print(id, "USAGE: amx_slap <steamID or nickname or #authid or IP> <damage>");
+		console_print(id, "USAGE: aps_slap <steamID or nickname or #authid or IP> <damage>");
 		return PLUGIN_HANDLED;
 	}
 	
@@ -235,7 +235,7 @@ public CmdSlay(const id, const access) {
 	}
 
 	if (read_argc() < 2) {
-		console_print(id, "USAGE: amx_slay <steamID or nickname or #authid or IP>");
+		console_print(id, "USAGE: aps_slay <steamID or nickname or #authid or IP>");
 		return PLUGIN_HANDLED;
 	}
 	

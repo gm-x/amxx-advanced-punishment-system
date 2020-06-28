@@ -10,7 +10,7 @@ public plugin_init() {
 	register_plugin("[APS] Voice Chat", APS_VERSION_STR, "GM-X Team");
 	register_dictionary("aps_voice_chat.txt");
 
-	register_concmd("amx_mute", "CmdMute", FLAG_ACCESS);
+	register_concmd("aps_mute", "CmdMute", FLAG_ACCESS);
 	register_concmd("aps_voicemenu", "CmdMenu", FLAG_ACCESS);
 }
 
@@ -39,7 +39,7 @@ public CmdMute(const id, const access) {
 	enum { arg_player = 1, arg_time, arg_reason, arg_details };
 
 	if (read_argc() < 3) {
-		console_print(id, "USAGE: amx_mute <steamID or nickname or #authid or IP> <time in mins> <reason> [details]");
+		console_print(id, "USAGE: aps_mute <steamID or nickname or #authid or IP> <time in mins> <reason> [details]");
 		return PLUGIN_HANDLED;
 	}
 

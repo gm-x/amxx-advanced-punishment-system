@@ -20,7 +20,7 @@ public plugin_init() {
 	register_dictionary("aps_time.txt");
 
 	register_concmd("aps_ban", "CmdBan", FLAG_ACCESS);
-	register_concmd("amx_banmenu", "CmdMenu", FLAG_ACCESS);
+	register_concmd("aps_banmenu", "CmdMenu", FLAG_ACCESS);
 	Forwards[FWD_PlayerBanKick] = CreateMultiForward("APS_PlayerBanKick", ET_STOP, FP_CELL);
 }
 
