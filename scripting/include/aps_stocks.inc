@@ -34,6 +34,10 @@ stock APS_FindPlayerByTarget(const buffer[]) {
 }
 
 stock bool:APS_CanUserPunish(const index, target = 0, access = 0, checks = 0) {
+	if (index == 0) {
+		return true;
+	}
+
 	new bitsum;
 	if (access && (checks & APS_CheckAccess)) {
 		if ((get_user_flags(index) & access) == access) {

@@ -120,6 +120,7 @@ public plugin_init() {
 
 	register_clcmd("aps_plmenu", "CmdPlayersMenu", FLAG_PLMENU_ACCESS);
 	register_concmd("aps_reloadreasons", "CmdReloadReasons", FLAG_RELOAD_REASONS_ACCESS);
+	GMX_RegisterCommand("reasons_reload", "OnReload");
 
 	register_menucmd(register_menuid("APS_PLAYERS_MENU"), 1023, "HandlePlayersMenu");
 	register_menucmd(register_menuid("APS_TYPES_MENU"), 1023, "HandleTypesMenu");
@@ -221,6 +222,10 @@ public CmdReloadReasons(const id, const access) {
 
 	GMX_MakeRequest("punish/reasons", Invalid_GripJSONValue, "OnReasonsResponse");
 	return PLUGIN_HANDLED;
+}
+
+public OnReload() {
+	GMX_MakeRequest("punish/reasons", Invalid_GripJSONValue, "OnReasonsResponse");
 }
 
 public APS_PlMenu_Add(const APS_Type:type, const title[], const handler, const resonHandler, const timeHandler, const extraHandler, const bool:needConfirm) {
