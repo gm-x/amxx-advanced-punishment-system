@@ -692,7 +692,7 @@ public HandleReasonsMenu(const id, const key) {
 			new reason = (Players[id][PlayerPage] * 8) + key;
 			set_player_data(id, Index_Reason, reason);
 			get_reason(reason);
-			if (reason >= 0) {
+			if (Reason[ReasonTime] >= 0) {
 				set_player_data(id, Index_Time, Reason[ReasonTime]);
 			}
 			nextStep(id);
@@ -911,6 +911,7 @@ clearPlayer(const id) {
 }
 
 parseReasons(const GripJSONValue:data) {
+	ArrayClear(Reasons);
 	for (new i = 0, n = grip_json_array_get_count(data), GripJSONValue:element, GripJSONValue:time; i < n; i++) {
 		element = grip_json_array_get_value(data, i);
 		if (grip_json_get_type(element) == GripJSONObject) {
