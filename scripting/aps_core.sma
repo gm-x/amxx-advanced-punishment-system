@@ -247,9 +247,7 @@ bool:punishPlayer(const player) {
 		grip_json_object_set_null(request, "details");
 	}
 
-	if (Punishment[PunishmentPunisherID] > 0) {
-		grip_json_object_set_number(request, "punisher_id", Punishment[PunishmentPunisherID]);
-	}
+	grip_json_object_set_number(request, "punisher_id", Punishment[PunishmentPunisherID]);
 
 	if (GMX_PlayerIsLoaded(player)) {
 		grip_json_object_set_number(request, "player_id", GMX_PlayerGetPlayerId(player));
