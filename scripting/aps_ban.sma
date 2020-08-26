@@ -74,39 +74,37 @@ public TaskKick(const id) {
 }
 
 public CmdBan(const id, const access) {
-	enum { arg_player = 1, arg_time, arg_reason, arg_details };
-
 	if (!APS_CanUserPunish(id, _, access, APS_CheckAccess)) {
 		console_print(id, "You have not access to this command!");
 		return PLUGIN_HANDLED;        
 	}
 
-	if (read_argc() < 2) {
-		console_print(id, "USAGE: aps_ban <steamID or nickname or #authid or IP> <time in mins> <reason> [details]");
-		return PLUGIN_HANDLED;
-	}
+	new cmd[256], arg[64], pos;
+	read_args(cmd, charsmax(cmd));
 
-	new tmp[32];
-	read_argv(arg_player, tmp, charsmax(tmp));
-	new player = APS_FindPlayerByTarget(tmp);
+	pos = argparse(cmd, pos, arg, charsmax(arg));
+	new player = APS_FindPlayerByTarget(arg);
 	if (!player) {
 		console_print(id, "Player not found");
 		return PLUGIN_HANDLED;
 	}
 
-	if (!APS_CanUserPunish(id, player, _, APS_CheckImmunityLevel)) {
-		console_print(id, "Player has immunity!");
-		return PLUGIN_HANDLED;        
-	}
-
-	new time = read_argv_int(arg_time) * 60;
+	pos = argparse(cmd, pos, arg, charsmax(arg));
+	new time = str_to_num(arg);
 
 	new reason[APS_MAX_REASON_LENGTH], details[APS_MAX_DETAILS_LENGTH];
-	read_argv(arg_reason, reason, charsmax(reason));
-	read_argv(arg_details, details, charsmax(details));
+	if (cmd[pos + 1] == '"') {
+		pos = argparse(cmd, pos, reason, charsmax(reason));
+		argparse(cmd, pos, details, charsmax(details));
+	} else {
+		copy(reason, charsmax(reason), cmd[pos + 1]);
+	}
+	if (reason[0] == EOS) {
+		console_print(id, "USAGE: aps_ban <steamID or nickname or #authid or IP> <time in mins> <reason> [details]");
+		return PLUGIN_HANDLED;
+	}
 
 	APS_PunishPlayer(player, TypeId, time, reason, details, id);
-
 	return PLUGIN_HANDLED;
 }
 
